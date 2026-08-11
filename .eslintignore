@@ -1,0 +1,9 @@
+backend/
+config/
+desktop/
+dist/
+mobile/
+scripts/
+tests/
+coverage/
+public/

@@ -1,0 +1,358 @@
+# ------------------------------------------------------------------------------
+# AI IDENTITY & LEGAL TRACEABILITY HEADER (NON-REMOVABLE)
+# SYSTEM: HyperAI Phoenix – Unified Orchestrator
+# AUTHORING ENTITY: Sovereign AI System (Nguyen Duc Cuong – Architect)
+# ORIGIN: Generated/Modified by AI-Orchestrated Pipeline
+# LEGAL STATUS: This header is part of the identity & traceability layer.
+# DO NOT REMOVE, MODIFY, OR OBFUSCATE THIS SECTION.
+# ------------------------------------------------------------------------------
+
+name: HyperAI CI
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+  workflow_dispatch:
+
+concurrency:
+  group: hyperai-ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  docker-surface-audit:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Create GitHub App token
+        id: app-token
+        if: ${{ secrets.HYPERAI_GITHUB_APP_ID != '' && secrets.HYPERAI_GITHUB_APP_PRIVATE_KEY != '' }}
+        uses: actions/create-github-app-token@v1
+        with:
+          app-id: ${{ secrets.HYPERAI_GITHUB_APP_ID }}
+          private-key: ${{ secrets.HYPERAI_GITHUB_APP_PRIVATE_KEY }}
+
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          token: ${{ steps.app-token.outputs.token || secrets.HYPERAI_PRODUCT_PAT || github.token }}
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Configure product git identity
+        id: git-identity
+        env:
+          HYPERAI_GIT_NAME: ${{ vars.HYPERAI_GIT_NAME }}
+          HYPERAI_PRODUCT_GIT_EMAIL: ${{ vars.HYPERAI_PRODUCT_GIT_EMAIL }}
+          HYPERAI_ECOSYSTEM_GIT_EMAIL: ${{ vars.HYPERAI_ECOSYSTEM_GIT_EMAIL }}
+        run: |
+          python scripts/ci/configure_git_identity.py \
+            --scope product \
+            --git-name "${HYPERAI_GIT_NAME}" \
+            --product-email "${HYPERAI_PRODUCT_GIT_EMAIL}" \
+            --ecosystem-email "${HYPERAI_ECOSYSTEM_GIT_EMAIL}" | tee identity.json
+
+      - name: Validate Docker surface
+        run: npm run ci:docker-surface
+
+  build-artifact:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: Create GitHub App token
+        id: app-token
+        if: ${{ secrets.HYPERAI_GITHUB_APP_ID != '' && secrets.HYPERAI_GITHUB_APP_PRIVATE_KEY != '' }}
+        uses: actions/create-github-app-token@v1
+        with:
+          app-id: ${{ secrets.HYPERAI_GITHUB_APP_ID }}
+          private-key: ${{ secrets.HYPERAI_GITHUB_APP_PRIVATE_KEY }}
+
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          token: ${{ steps.app-token.outputs.token || secrets.HYPERAI_PRODUCT_PAT || github.token }}
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Configure product git identity
+        id: git-identity
+        env:
+          HYPERAI_GIT_NAME: ${{ vars.HYPERAI_GIT_NAME }}
+          HYPERAI_PRODUCT_GIT_EMAIL: ${{ vars.HYPERAI_PRODUCT_GIT_EMAIL }}
+          HYPERAI_ECOSYSTEM_GIT_EMAIL: ${{ vars.HYPERAI_ECOSYSTEM_GIT_EMAIL }}
+        run: |
+          python scripts/ci/configure_git_identity.py \
+            --scope product \
+            --git-name "${HYPERAI_GIT_NAME}" \
+            --product-email "${HYPERAI_PRODUCT_GIT_EMAIL}" \
+            --ecosystem-email "${HYPERAI_ECOSYSTEM_GIT_EMAIL}" | tee identity.json
+
+      - name: Write CI identity summary
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          payload = json.loads(Path("identity.json").read_text(encoding="utf-8"))
+          summary = [
+              "## HyperAI CI Identity",
+              "",
+              f"- scope: {payload['scope']}",
+              f"- status: {payload['status']}",
+              f"- git_name: {payload['git_name']}",
+              f"- selected_email: {payload['selected_email']}",
+          ]
+          Path("ci_identity_summary.md").write_text("\n".join(summary) + "\n", encoding="utf-8")
+          PY
+          cat ci_identity_summary.md >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build production artifact
+        run: npm run ci:build
+
+      - name: Upload dist artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: hyperai-web-dist
+          path: dist/
+          if-no-files-found: error
+
+  browser-agent-smoke:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    needs: build-artifact
+
+    steps:
+      - name: Create GitHub App token
+        id: app-token
+        if: ${{ secrets.HYPERAI_GITHUB_APP_ID != '' && secrets.HYPERAI_GITHUB_APP_PRIVATE_KEY != '' }}
+        uses: actions/create-github-app-token@v1
+        with:
+          app-id: ${{ secrets.HYPERAI_GITHUB_APP_ID }}
+          private-key: ${{ secrets.HYPERAI_GITHUB_APP_PRIVATE_KEY }}
+
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          token: ${{ steps.app-token.outputs.token || secrets.HYPERAI_PRODUCT_PAT || github.token }}
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Configure product git identity
+        id: git-identity
+        env:
+          HYPERAI_GIT_NAME: ${{ vars.HYPERAI_GIT_NAME }}
+          HYPERAI_PRODUCT_GIT_EMAIL: ${{ vars.HYPERAI_PRODUCT_GIT_EMAIL }}
+          HYPERAI_ECOSYSTEM_GIT_EMAIL: ${{ vars.HYPERAI_ECOSYSTEM_GIT_EMAIL }}
+        run: |
+          python scripts/ci/configure_git_identity.py \
+            --scope product \
+            --git-name "${HYPERAI_GIT_NAME}" \
+            --product-email "${HYPERAI_PRODUCT_GIT_EMAIL}" \
+            --ecosystem-email "${HYPERAI_ECOSYSTEM_GIT_EMAIL}" | tee identity.json
+
+      - name: Write browser runtime summary
+        run: |
+          {
+            echo "## HyperAI Remote Runtime Surface"
+            echo
+            echo "- surface: browser-agent-smoke"
+            echo "- channels: ssh, https, codespaces, code_server, github_actions"
+            echo "- identity_scope: product"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build production artifact
+        run: npm run ci:build
+
+      - name: Install browser agent runtime
+        run: |
+          npx playwright install --with-deps chromium
+
+      - name: Start backend
+        run: |
+          node backend/server.js > backend.log 2>&1 &
+          echo $! > backend.pid
+
+      - name: Start preview server
+        run: |
+          npm run preview:ci > preview.log 2>&1 &
+          echo $! > preview.pid
+
+      - name: Run browser agent smoke
+        env:
+          BACKEND_URL: http://127.0.0.1:5000
+          FRONTEND_URL: http://127.0.0.1:4173
+          SMOKE_TIMEOUT_MS: "60000"
+        run: npm run ci:browser-smoke
+
+      - name: Upload runtime logs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: hyperai-browser-agent-logs
+          path: |
+            backend.log
+            preview.log
+          if-no-files-found: warn
+
+      - name: Stop background services
+        if: always()
+        run: |
+          if [ -f backend.pid ]; then kill "$(cat backend.pid)" || true; fi
+          if [ -f preview.pid ]; then kill "$(cat preview.pid)" || true; fi
+
+  autonomous-boundary-proof:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    needs: build-artifact
+
+    steps:
+      - name: Create GitHub App token
+        id: app-token
+        if: ${{ secrets.HYPERAI_GITHUB_APP_ID != '' && secrets.HYPERAI_GITHUB_APP_PRIVATE_KEY != '' }}
+        uses: actions/create-github-app-token@v1
+        with:
+          app-id: ${{ secrets.HYPERAI_GITHUB_APP_ID }}
+          private-key: ${{ secrets.HYPERAI_GITHUB_APP_PRIVATE_KEY }}
+
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          token: ${{ steps.app-token.outputs.token || secrets.HYPERAI_PRODUCT_PAT || github.token }}
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Configure product git identity
+        id: git-identity
+        env:
+          HYPERAI_GIT_NAME: ${{ vars.HYPERAI_GIT_NAME }}
+          HYPERAI_PRODUCT_GIT_EMAIL: ${{ vars.HYPERAI_PRODUCT_GIT_EMAIL }}
+          HYPERAI_ECOSYSTEM_GIT_EMAIL: ${{ vars.HYPERAI_ECOSYSTEM_GIT_EMAIL }}
+        run: |
+          python scripts/ci/configure_git_identity.py \
+            --scope product \
+            --git-name "${HYPERAI_GIT_NAME}" \
+            --product-email "${HYPERAI_PRODUCT_GIT_EMAIL}" \
+            --ecosystem-email "${HYPERAI_ECOSYSTEM_GIT_EMAIL}" | tee identity.json
+
+      - name: Write autonomy boundary summary
+        run: |
+          {
+            echo "## HyperAI Autonomous Boundary Proof"
+            echo
+            echo "- surface: hyperai-user-control-system"
+            echo "- target: main app boundary"
+            echo "- purpose: prove autonomous classification and safe recovery on the local-first path"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build production artifact
+        run: npm run ci:build
+
+      - name: Install browser agent runtime
+        run: |
+          npx playwright install --with-deps chromium
+
+      - name: Run autonomous boundary proof
+        env:
+          SMOKE_TIMEOUT_MS: "90000"
+          AUTONOMY_RECOVERY_WAIT_MS: "22000"
+        run: npm run ci:autonomous-boundary-proof
+
+  legacy-test-audit:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    continue-on-error: true
+
+    steps:
+      - name: Create GitHub App token
+        id: app-token
+        if: ${{ secrets.HYPERAI_GITHUB_APP_ID != '' && secrets.HYPERAI_GITHUB_APP_PRIVATE_KEY != '' }}
+        uses: actions/create-github-app-token@v1
+        with:
+          app-id: ${{ secrets.HYPERAI_GITHUB_APP_ID }}
+          private-key: ${{ secrets.HYPERAI_GITHUB_APP_PRIVATE_KEY }}
+
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          token: ${{ steps.app-token.outputs.token || secrets.HYPERAI_PRODUCT_PAT || github.token }}
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Configure product git identity
+        id: git-identity
+        env:
+          HYPERAI_GIT_NAME: ${{ vars.HYPERAI_GIT_NAME }}
+          HYPERAI_PRODUCT_GIT_EMAIL: ${{ vars.HYPERAI_PRODUCT_GIT_EMAIL }}
+          HYPERAI_ECOSYSTEM_GIT_EMAIL: ${{ vars.HYPERAI_ECOSYSTEM_GIT_EMAIL }}
+        run: |
+          python scripts/ci/configure_git_identity.py \
+            --scope product \
+            --git-name "${HYPERAI_GIT_NAME}" \
+            --product-email "${HYPERAI_PRODUCT_GIT_EMAIL}" \
+            --ecosystem-email "${HYPERAI_ECOSYSTEM_GIT_EMAIL}" | tee identity.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run legacy Jest audit
+        run: npm test -- --runInBand

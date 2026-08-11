@@ -1,0 +1,27 @@
+.navigationBar {
+    margin-bottom: 16px;
+}
+
+.navigationBar ul {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+    list-style: none;
+    padding: 0;
+    margin: 0;
+}
+
+.navigationBar a {
+    display: inline-flex;
+    align-items: center;
+    padding: 8px 12px;
+    border-radius: 999px;
+    background-color: #ffffff;
+    color: #1f2937;
+    text-decoration: none;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+}
+
+.navigationBar a:hover {
+    background-color: #eef6ff;
+}

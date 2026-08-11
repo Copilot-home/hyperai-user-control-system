@@ -1,0 +1,352 @@
+.workspacePage {
+    min-height: 100vh;
+    background: linear-gradient(180deg, #f5f7fb 0%, #eef3ff 100%);
+    color: #11203b;
+    padding: 20px;
+}
+
+.workspaceShell {
+    display: grid;
+    grid-template-columns: minmax(0, 1.8fr) 340px;
+    gap: 20px;
+    align-items: start;
+}
+
+.conversationCore,
+.companionRail,
+.workbench {
+    background: rgba(255, 255, 255, 0.88);
+    border: 1px solid rgba(17, 32, 59, 0.08);
+    border-radius: 24px;
+    box-shadow: 0 18px 50px rgba(62, 89, 160, 0.08);
+}
+
+.conversationCore {
+    padding: 24px;
+}
+
+.heroBlock {
+    display: grid;
+    gap: 12px;
+    margin-bottom: 20px;
+}
+
+.eyebrow {
+    margin: 0;
+    text-transform: uppercase;
+    letter-spacing: 0.16em;
+    font-size: 12px;
+    color: #4b72d6;
+}
+
+.supportingText {
+    margin: 0;
+    color: #4b587c;
+    line-height: 1.6;
+}
+
+.metaRow {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+    color: #5f6f95;
+    font-size: 13px;
+}
+
+.chatComposer {
+    display: grid;
+    gap: 12px;
+    margin-bottom: 20px;
+}
+
+.input {
+    width: 100%;
+    min-height: 132px;
+    border-radius: 18px;
+    border: 1px solid rgba(75, 114, 214, 0.18);
+    padding: 16px;
+    font: inherit;
+    resize: vertical;
+    background: #f9fbff;
+    color: #11203b;
+}
+
+.actionRow,
+.quickPromptRow,
+.tabRow {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+}
+
+.primaryButton,
+.secondaryButton,
+.quickPrompt,
+.tab,
+.activeTab,
+.railItem {
+    border: 0;
+    border-radius: 999px;
+    font: inherit;
+}
+
+.primaryButton {
+    background: #214ae0;
+    color: #fff;
+    padding: 12px 18px;
+}
+
+.secondaryButton {
+    background: #dfe8ff;
+    color: #214ae0;
+    padding: 12px 18px;
+}
+
+.quickPrompt,
+.tab,
+.activeTab,
+.railItem {
+    background: #f0f4ff;
+    color: #213154;
+    padding: 10px 14px;
+}
+
+.activeTab {
+    background: #214ae0;
+    color: #fff;
+}
+
+.responseCard,
+.railSection,
+.panelCard,
+.listCard,
+.controlDeck,
+.controlSignalCard,
+.controlActionCard {
+    border: 1px solid rgba(17, 32, 59, 0.08);
+    border-radius: 20px;
+    background: #fff;
+}
+
+.responseCard {
+    padding: 18px;
+    display: grid;
+    gap: 12px;
+}
+
+.controlDeck {
+    margin-top: 18px;
+    padding: 18px;
+    display: grid;
+    gap: 14px;
+}
+
+.controlHeader {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 12px;
+}
+
+.controlHeader p {
+    margin: 6px 0 0;
+    color: #526280;
+    line-height: 1.6;
+}
+
+.controlSignalGrid,
+.controlActionGrid {
+    display: grid;
+    gap: 12px;
+}
+
+.controlSignalGrid {
+    grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+}
+
+.controlActionGrid {
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+}
+
+.controlSignalCard,
+.controlActionCard {
+    padding: 14px;
+    display: grid;
+    gap: 6px;
+}
+
+.controlSignalCard span,
+.controlActionCard span,
+.controlActionCard small {
+    color: #526280;
+    line-height: 1.5;
+}
+
+.controlActionCard {
+    border: 1px solid rgba(33, 74, 224, 0.16);
+    background: #f7faff;
+    text-align: left;
+    cursor: pointer;
+}
+
+.controlActionCard:hover {
+    border-color: rgba(33, 74, 224, 0.28);
+    background: #eff4ff;
+}
+
+.secretControl {
+    padding-top: 4px;
+    display: grid;
+    gap: 10px;
+}
+
+.secretHeader {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 12px;
+}
+
+.secretHeader h3,
+.secretHeader p,
+.secretMeta span {
+    margin: 0;
+}
+
+.secretHeader p,
+.secretMeta span {
+    color: #526280;
+    line-height: 1.5;
+}
+
+.secretMeta,
+.secretForm {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    align-items: center;
+}
+
+.secretInput {
+    flex: 1 1 280px;
+    min-width: 240px;
+    border-radius: 14px;
+    border: 1px solid rgba(75, 114, 214, 0.2);
+    padding: 12px 14px;
+    font: inherit;
+    background: #f9fbff;
+    color: #11203b;
+}
+
+.responseHeader {
+    display: flex;
+    justify-content: space-between;
+    gap: 10px;
+    align-items: baseline;
+}
+
+.responseText,
+.smallText,
+.statusRow small,
+.listCard p,
+.panelCard p {
+    margin: 0;
+    color: #526280;
+    line-height: 1.6;
+}
+
+.participantGrid,
+.panelGrid,
+.listGrid {
+    display: grid;
+    gap: 12px;
+}
+
+.participantGrid {
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+}
+
+.panelGrid,
+.listGrid {
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+}
+
+.participantCard,
+.panelCard,
+.listCard {
+    padding: 16px;
+    display: grid;
+    gap: 8px;
+}
+
+.companionRail {
+    padding: 18px;
+    display: grid;
+    gap: 14px;
+    position: sticky;
+    top: 20px;
+}
+
+.railSection {
+    padding: 16px;
+    display: grid;
+    gap: 10px;
+}
+
+.railItem,
+.statusRow {
+    display: grid;
+    gap: 4px;
+    text-align: left;
+}
+
+.statusRow {
+    padding: 12px;
+    background: #f8faff;
+    border-radius: 14px;
+}
+
+.workbench {
+    margin-top: 20px;
+    padding: 20px;
+    display: grid;
+    gap: 16px;
+}
+
+.workspaceIntelligence {
+    margin-top: 20px;
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: 14px;
+}
+
+.intelligenceCard {
+    background: rgba(255, 255, 255, 0.92);
+    border: 1px solid rgba(17, 32, 59, 0.08);
+    border-radius: 20px;
+    padding: 16px;
+    display: grid;
+    gap: 8px;
+    box-shadow: 0 18px 50px rgba(62, 89, 160, 0.08);
+}
+
+.intelligenceCard p {
+    margin: 0;
+    color: #526280;
+    line-height: 1.5;
+}
+
+.tabPanel {
+    display: grid;
+    gap: 14px;
+}
+
+@media (max-width: 1100px) {
+    .workspaceShell {
+        grid-template-columns: 1fr;
+    }
+
+    .companionRail {
+        position: static;
+    }
+}

@@ -1,0 +1,31 @@
+.message-bubble {
+    display: flex;
+    margin-bottom: 12px;
+}
+
+.message-bubble.user {
+    justify-content: flex-end;
+}
+
+.message-bubble.bot {
+    justify-content: flex-start;
+}
+
+.message-content {
+    max-width: 75%;
+    padding: 10px 14px;
+    border-radius: 12px;
+    background: #f3f4f6;
+    color: #111827;
+}
+
+.message-bubble.user .message-content {
+    background: #dbeafe;
+}
+
+.timestamp {
+    display: block;
+    margin-top: 6px;
+    font-size: 12px;
+    color: #6b7280;
+}

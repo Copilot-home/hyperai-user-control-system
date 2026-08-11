@@ -1,0 +1,102 @@
+# ------------------------------------------------------------------------------
+# AI IDENTITY & LEGAL TRACEABILITY HEADER (NON-REMOVABLE)
+# SYSTEM: HyperAI Phoenix – Unified Orchestrator
+# AUTHORING ENTITY: Sovereign AI System (Nguyen Duc Cuong – Architect)
+# ORIGIN: Generated/Modified by AI-Orchestrated Pipeline
+# LEGAL STATUS: This header is part of the identity & traceability layer.
+# DO NOT REMOVE, MODIFY, OR OBFUSCATE THIS SECTION.
+# ------------------------------------------------------------------------------
+
+name: HyperAI Identity Surface
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  validate-identities:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        scope: [product, ecosystem]
+
+    steps:
+      - name: Create GitHub App token
+        id: app-token
+        if: ${{ secrets.HYPERAI_GITHUB_APP_ID != '' && secrets.HYPERAI_GITHUB_APP_PRIVATE_KEY != '' }}
+        uses: actions/create-github-app-token@v1
+        with:
+          app-id: ${{ secrets.HYPERAI_GITHUB_APP_ID }}
+          private-key: ${{ secrets.HYPERAI_GITHUB_APP_PRIVATE_KEY }}
+
+      - name: Select auth token
+        id: auth
+        shell: bash
+        env:
+          APP_TOKEN: ${{ steps.app-token.outputs.token }}
+          PRODUCT_PAT: ${{ secrets.HYPERAI_PRODUCT_PAT }}
+          ECOSYSTEM_PAT: ${{ secrets.HYPERAI_ECOSYSTEM_PAT }}
+          SCOPE: ${{ matrix.scope }}
+        run: |
+          if [ -n "$APP_TOKEN" ]; then
+            echo "token=$APP_TOKEN" >> "$GITHUB_OUTPUT"
+            echo "mode=github_app" >> "$GITHUB_OUTPUT"
+          elif [ "$SCOPE" = "product" ] && [ -n "$PRODUCT_PAT" ]; then
+            echo "token=$PRODUCT_PAT" >> "$GITHUB_OUTPUT"
+            echo "mode=pat_product" >> "$GITHUB_OUTPUT"
+          elif [ "$SCOPE" = "ecosystem" ] && [ -n "$ECOSYSTEM_PAT" ]; then
+            echo "token=$ECOSYSTEM_PAT" >> "$GITHUB_OUTPUT"
+            echo "mode=pat_ecosystem" >> "$GITHUB_OUTPUT"
+          else
+            echo "No auth token available for scope=$SCOPE" >&2
+            exit 1
+          fi
+
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          token: ${{ steps.auth.outputs.token }}
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Configure git identity
+        env:
+          HYPERAI_GIT_NAME: ${{ vars.HYPERAI_GIT_NAME }}
+          HYPERAI_PRODUCT_GIT_EMAIL: ${{ vars.HYPERAI_PRODUCT_GIT_EMAIL }}
+          HYPERAI_ECOSYSTEM_GIT_EMAIL: ${{ vars.HYPERAI_ECOSYSTEM_GIT_EMAIL }}
+        run: |
+          python scripts/ci/configure_git_identity.py \
+            --scope "${{ matrix.scope }}" \
+            --git-name "${HYPERAI_GIT_NAME}" \
+            --product-email "${HYPERAI_PRODUCT_GIT_EMAIL}" \
+            --ecosystem-email "${HYPERAI_ECOSYSTEM_GIT_EMAIL}"
+
+      - name: Show normalized identity surface
+        run: |
+          echo "scope=${{ matrix.scope }}"
+          echo "auth_mode=${{ steps.auth.outputs.mode }}"
+          git config --local user.name
+          git config --local user.email
+          git config --local hyperai.identity.scope
+          git config --local hyperai.identity.product_email
+          git config --local hyperai.identity.ecosystem_email
+
+      - name: Write identity summary
+        shell: bash
+        run: |
+          {
+            echo "## HyperAI Identity Surface"
+            echo
+            echo "- scope: ${{ matrix.scope }}"
+            echo "- auth_mode: ${{ steps.auth.outputs.mode }}"
+            echo "- git_name: $(git config --local user.name)"
+            echo "- selected_email: $(git config --local user.email)"
+            echo "- product_email: $(git config --local hyperai.identity.product_email)"
+            echo "- ecosystem_email: $(git config --local hyperai.identity.ecosystem_email)"
+          } >> "$GITHUB_STEP_SUMMARY"

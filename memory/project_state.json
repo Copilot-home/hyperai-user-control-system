@@ -1,0 +1,35 @@
+{
+    "workspace":  "hyperai-user-control-system",
+    "last_run":  "2026-04-23T18:57:23.272Z",
+    "current_run":  "2026-06-16T21:23:32.7521806+07:00",
+    "delta_detected":  false,
+    "runtime_truth":  {
+                          "backend":  "backend/server.js",
+                          "frontend":  "node scripts/runtime/static-spa-server.mjs dist-isolated 4173",
+                          "ports":  [
+                                        5000,
+                                        4173
+                                    ],
+    "backend_pid":  null,
+    "frontend_pid":  null
+                      },
+    "ci_truth":  ".github/workflows/ci.yml",
+    "affected_paths":  [
+                           "dist-isolated/assets/index.a901cbf1.js",
+                           "dist-isolated/assets/index.9972bc5a.css",
+                           "dist-isolated/index.html",
+                           "memory/work_journal.md",
+                           "memory/project_state.json"
+                       ],
+    "verified":  [
+                     "dist-isolated artifacts were newer than the last cycle",
+                     "ports 5000 and 4173 had no active listeners in this environment",
+                     "backend runtime truth remains backend/server.js and CI truth remains .github/workflows/ci.yml"
+                 ],
+    "not_verified":  [
+                         "npm run ci:build was not rerun",
+                         "npm run ci:browser-smoke was not rerun",
+                         "advisory-only checks (`npm test -- --runInBand`, `npm run lint`) were not rerun"
+                     ],
+    "remaining_risk":  "Artifact drift is low-risk, but any future runtime bring-up should be reverified before promoting backend or frontend authority."
+}

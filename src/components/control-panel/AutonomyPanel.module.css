@@ -1,0 +1,203 @@
+.autonomyPanel {
+    border: 1px solid #d9e4e8;
+    border-radius: 12px;
+    padding: 16px;
+    background: linear-gradient(180deg, #ffffff 0%, #f5fafb 100%);
+    margin-top: 16px;
+}
+
+.header {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    gap: 12px;
+    margin-bottom: 12px;
+}
+
+.mode {
+    display: inline-flex;
+    align-items: center;
+    border-radius: 999px;
+    padding: 4px 10px;
+    font-size: 0.8rem;
+    font-weight: 700;
+    text-transform: uppercase;
+}
+
+.autonomous {
+    background: #dff3e4;
+    color: #1b5e20;
+}
+
+.stabilizing {
+    background: #fff4db;
+    color: #9a6700;
+}
+
+.recovering {
+    background: #ffe4e1;
+    color: #b3261e;
+}
+
+.standby {
+    background: #edf2f7;
+    color: #475467;
+}
+
+.summary {
+    margin: 0 0 12px;
+    color: #345;
+}
+
+.grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    gap: 12px;
+    margin-bottom: 16px;
+}
+
+.metricCard {
+    border: 1px solid #d9e4e8;
+    border-radius: 10px;
+    padding: 12px;
+    background: #fff;
+}
+
+.metricLabel {
+    font-size: 0.78rem;
+    text-transform: uppercase;
+    color: #60717c;
+    margin-bottom: 6px;
+}
+
+.metricValue {
+    font-weight: 700;
+    color: #1f2933;
+}
+
+.controls {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    margin-bottom: 16px;
+}
+
+.policyCard {
+    border: 1px solid #d9e4e8;
+    border-radius: 10px;
+    padding: 12px;
+    background: #fff;
+    margin-bottom: 16px;
+}
+
+.policyHeader {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    margin-bottom: 8px;
+}
+
+.policyLine {
+    margin: 0;
+    color: #1f2933;
+    font-size: 0.9rem;
+}
+
+.runtimeAuthority {
+    margin: 10px 0;
+    padding: 10px;
+    border-radius: 8px;
+    background: #f7fbff;
+    border: 1px dotted #cfe3ff;
+}
+
+.policyList {
+    list-style: none;
+    margin: 10px 0 0;
+    padding: 0;
+    display: grid;
+    gap: 6px;
+}
+
+.policyListItem {
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+    padding: 8px;
+    background: #f9fafb;
+    font-size: 0.85rem;
+    color: #334155;
+}
+
+.sectionTitle {
+    margin: 0 0 10px;
+}
+
+.list {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    display: grid;
+    gap: 10px;
+}
+
+.ecosystemGrid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+    gap: 12px;
+    margin-bottom: 16px;
+}
+
+.ecosystemCard {
+    border: 1px solid #d9e4e8;
+    border-radius: 10px;
+    padding: 12px;
+    background: #fff;
+}
+
+.evidenceList {
+    list-style: none;
+    padding: 0;
+    margin: 8px 0 0;
+    display: grid;
+    gap: 6px;
+}
+
+.evidenceItem {
+    font-size: 0.82rem;
+    color: #4a5560;
+}
+
+.listItem {
+    border: 1px solid #d9e4e8;
+    border-radius: 10px;
+    padding: 12px;
+    background: #fff;
+}
+
+.listTop {
+    display: flex;
+    justify-content: space-between;
+    gap: 12px;
+    margin-bottom: 6px;
+}
+
+.detail {
+    margin: 0;
+    color: #4a5560;
+}
+
+.statusPill {
+    display: inline-flex;
+    border-radius: 999px;
+    padding: 2px 8px;
+    background: #eef6ff;
+    color: #0b57d0;
+    font-size: 0.78rem;
+    font-weight: 600;
+    text-transform: uppercase;
+}
+
+.error {
+    color: #b3261e;
+    margin: 0 0 12px;
+}

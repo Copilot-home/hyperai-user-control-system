@@ -1,0 +1,97 @@
+# ------------------------------------------------------------------------------
+# AI IDENTITY & LEGAL TRACEABILITY HEADER (NON-REMOVABLE)
+# SYSTEM: HyperAI Phoenix – Unified Orchestrator
+# AUTHORING ENTITY: Sovereign AI System (Nguyen Duc Cuong – Architect)
+# ORIGIN: Generated/Modified by AI-Orchestrated Pipeline
+# LEGAL STATUS: This header is part of the identity & traceability layer.
+# DO NOT REMOVE, MODIFY, OR OBFUSCATE THIS SECTION.
+# ------------------------------------------------------------------------------
+
+name: HyperAI Release
+
+on:
+  push:
+    tags:
+      - "v*.*.*"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    steps:
+      - name: Create GitHub App token
+        id: app-token
+        if: ${{ secrets.HYPERAI_GITHUB_APP_ID != '' && secrets.HYPERAI_GITHUB_APP_PRIVATE_KEY != '' }}
+        uses: actions/create-github-app-token@v1
+        with:
+          app-id: ${{ secrets.HYPERAI_GITHUB_APP_ID }}
+          private-key: ${{ secrets.HYPERAI_GITHUB_APP_PRIVATE_KEY }}
+
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          token: ${{ steps.app-token.outputs.token || secrets.HYPERAI_PRODUCT_PAT || github.token }}
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Configure product git identity
+        id: git-identity
+        env:
+          HYPERAI_GIT_NAME: ${{ vars.HYPERAI_GIT_NAME }}
+          HYPERAI_PRODUCT_GIT_EMAIL: ${{ vars.HYPERAI_PRODUCT_GIT_EMAIL }}
+          HYPERAI_ECOSYSTEM_GIT_EMAIL: ${{ vars.HYPERAI_ECOSYSTEM_GIT_EMAIL }}
+        run: |
+          python scripts/ci/configure_git_identity.py \
+            --scope product \
+            --git-name "${HYPERAI_GIT_NAME}" \
+            --product-email "${HYPERAI_PRODUCT_GIT_EMAIL}" \
+            --ecosystem-email "${HYPERAI_ECOSYSTEM_GIT_EMAIL}" | tee identity.json
+
+      - name: Write release identity summary
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          payload = json.loads(Path("identity.json").read_text(encoding="utf-8"))
+          summary = [
+              "## HyperAI Release Identity",
+              "",
+              f"- scope: {payload['scope']}",
+              f"- status: {payload['status']}",
+              f"- selected_email: {payload['selected_email']}",
+              "- release_surface: github_release",
+          ]
+          Path("release_identity_summary.md").write_text("\n".join(summary) + "\n", encoding="utf-8")
+          PY
+          cat release_identity_summary.md >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build production artifact
+        run: npm run ci:build
+
+      - name: Package release bundle
+        run: |
+          tar -czf hyperai-user-control-system-dist.tgz dist
+
+      - name: Publish GitHub release
+        uses: softprops/action-gh-release@v2
+        env:
+          GITHUB_TOKEN: ${{ steps.app-token.outputs.token || secrets.HYPERAI_PRODUCT_PAT || github.token }}
+        with:
+          files: hyperai-user-control-system-dist.tgz

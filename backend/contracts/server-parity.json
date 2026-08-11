@@ -1,0 +1,41 @@
+{
+  "schema": "1.0",
+  "description": "Smoke-visible JSON contract describing the canonical backend stub responses that must stay aligned between backend/server.js and backend/server.ts.",
+  "endpoints": [
+    {
+      "path": "/api/health",
+      "method": "GET",
+      "status": 200,
+      "expectedKeys": ["status", "message"],
+      "notes": "Health checks must report OK along with the APO-NET message."
+    },
+    {
+      "path": "/api/runtime/capabilities",
+      "method": "GET",
+      "status": 200,
+      "expectedKeys": ["status", "version", "generated_at"],
+      "notes": "Runtime capabilities mirror the official backend stub."
+    },
+    {
+      "path": "/api/symphony/status",
+      "method": "GET",
+      "status": 200,
+      "expectedKeys": ["message", "status"],
+      "notes": "Status responses must always include a message and the symphony state payload."
+    },
+    {
+      "path": "/api/symphony/start",
+      "method": "POST",
+      "status": 200,
+      "expectedKeys": ["message", "status"],
+      "notes": "Starting the symphony should return an active acknowledgement."
+    },
+    {
+      "path": "/api/symphony/stop",
+      "method": "POST",
+      "status": 200,
+      "expectedKeys": ["message", "status"],
+      "notes": "Stopping the symphony should return an inactive acknowledgement."
+    }
+  ]
+}
