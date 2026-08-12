@@ -13,6 +13,15 @@ function getTargetPath(req) {
   return `/api${req.url}`;
 }
 
+async function getBody(req) {
+  return new Promise((resolve, reject) => {
+    const chunks = [];
+    req.on('data', (chunk) => chunks.push(chunk));
+    req.on('end', () => resolve(Buffer.concat(chunks)));
+    req.on('error', reject);
+  });
+}
+
 export default async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
@@ -24,13 +33,15 @@ export default async function handler(req, res) {
 
   const upstreamUrl = `${UPSTREAM}${getTargetPath(req)}`;
   try {
+    const body = req.method !== 'GET' && req.method !== 'HEAD' ? await getBody(req) : undefined;
     const upstreamRes = await fetch(upstreamUrl, {
       method: req.method,
       headers: { 'Content-Type': 'application/json' },
+      body,
     });
-    const body = await upstreamRes.text();
+    const upstreamBody = await upstreamRes.text();
     res.setHeader('Content-Type', upstreamRes.headers.get('content-type') || 'application/json');
-    res.status(upstreamRes.status).send(body);
+    res.status(upstreamRes.status).send(upstreamBody);
   } catch (err) {
     res.status(502).json({ error: 'upstream_unavailable', detail: err.message, upstream: upstreamUrl });
   }
