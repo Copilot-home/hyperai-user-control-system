@@ -3,15 +3,14 @@
 const UPSTREAM = 'https://macro-stomach-fill-families.trycloudflare.com';
 
 function getTargetPath(req) {
-  // Vercel rewrite /api/:path* -> /api?path=<...>
   const queryPath = req.query?.path;
   if (typeof queryPath === 'string') {
-    return `/${queryPath}`;
+    return `/api/${queryPath}`;
   }
   if (req.url.startsWith('/api/')) {
-    return req.url.slice(4);
+    return req.url;
   }
-  return req.url;
+  return `/api${req.url}`;
 }
 
 export default async function handler(req, res) {
