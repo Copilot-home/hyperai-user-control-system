@@ -26,17 +26,12 @@ jobs:
           git clone "https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}.git" .
           git checkout "${{ github.ref_name }}"
 
-      - name: Set up Node.js
+      - name: Set up Node.js and Python
         run: |
-          curl -fsSL https://deb.nodesource.com/setup_20.x | bash -
-          apt-get install -y nodejs
+          curl -fsSL https://deb.nodesource.com/setup_20.x | sudo bash -
+          sudo apt-get install -y nodejs python3.11 python3.11-pip
           node --version
           npm --version
-
-      - name: Set up Python
-        run: |
-          apt-get update
-          apt-get install -y python3.11 python3.11-pip
           python3.11 --version
 
       - name: Configure product git identity
