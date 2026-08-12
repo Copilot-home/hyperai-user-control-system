@@ -2,6 +2,18 @@
 // All /api/* requests are forwarded to the MacBook cloudflared tunnel.
 const UPSTREAM = 'https://macro-stomach-fill-families.trycloudflare.com';
 
+function getTargetPath(req) {
+  // Vercel rewrite /api/:path* -> /api?path=<...>
+  const queryPath = req.query?.path;
+  if (typeof queryPath === 'string') {
+    return `/${queryPath}`;
+  }
+  if (req.url.startsWith('/api/')) {
+    return req.url.slice(4);
+  }
+  return req.url;
+}
+
 export default async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
@@ -11,7 +23,7 @@ export default async function handler(req, res) {
     return res.status(200).end();
   }
 
-  const upstreamUrl = `${UPSTREAM}${req.url}`;
+  const upstreamUrl = `${UPSTREAM}${getTargetPath(req)}`;
   try {
     const upstreamRes = await fetch(upstreamUrl, {
       method: req.method,
