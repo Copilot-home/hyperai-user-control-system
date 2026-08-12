@@ -10,8 +10,8 @@ const viteArgs = ['build', ...process.argv.slice(2)];
 
 const deterministicBuildEnv = {
     ...process.env,
-    VITE_API_BASE_URL: 'http://localhost:5000/api',
-    VITE_API_ORIGIN: 'http://localhost:5000',
+    VITE_API_BASE_URL: '/api',
+    VITE_API_ORIGIN: '',
     VITE_ENABLE_CHAT_RUNTIME: 'false',
     VITE_ENABLE_USER_RUNTIME: 'false',
     VITE_ENABLE_NOTEBOOKLM_RUNTIME: 'false',
