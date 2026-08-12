@@ -1,6 +1,6 @@
 // APΩ Home Cloud - Vercel proxy to live Node Gateway
 // All /api/* requests are forwarded to the MacBook cloudflared tunnel.
-const UPSTREAM = 'https://convenient-cross-leone-amp.trycloudflare.com';
+const UPSTREAM = 'https://africa-immigration-del-mountain.trycloudflare.com';
 
 function getTargetPath(req) {
   const queryPath = req.query?.path;
