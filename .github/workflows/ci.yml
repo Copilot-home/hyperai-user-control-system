@@ -17,6 +17,19 @@ permissions:
   contents: read
 
 jobs:
+  docker-surface-audit:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    continue-on-error: true
+    steps:
+      - name: Checkout
+        run: |
+          git clone "https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}.git" .
+          git checkout "${{ github.ref_name }}"
+
+      - name: Validate Docker surface
+        run: node scripts/ci/validate-docker-surface.mjs
+
   build-artifact:
     runs-on: ubuntu-latest
     timeout-minutes: 15
@@ -47,3 +60,103 @@ jobs:
 
       - name: Build production artifact
         run: npm run ci:build
+
+  browser-agent-smoke:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    needs: build-artifact
+    steps:
+      - name: Checkout
+        run: |
+          git clone "https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}.git" .
+          git checkout "${{ github.ref_name }}"
+
+      - name: Set up Node.js
+        run: |
+          curl -fsSL https://deb.nodesource.com/setup_20.x | sudo bash -
+          sudo apt-get install -y nodejs
+          node --version
+          npm --version
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build production artifact
+        run: npm run ci:build
+
+      - name: Install Playwright
+        run: npx playwright install --with-deps chromium
+
+      - name: Start backend and preview
+        run: |
+          node backend/server.js > backend.log 2>&1 &
+          npm run preview:ci > preview.log 2>&1 &
+          sleep 5
+
+      - name: Run browser agent smoke
+        env:
+          BACKEND_URL: http://127.0.0.1:5000
+          FRONTEND_URL: http://127.0.0.1:4173
+          SMOKE_TIMEOUT_MS: "60000"
+        run: npm run ci:browser-smoke
+
+      - name: Stop background services
+        if: always()
+        run: |
+          pkill -f "node backend/server.js" || true
+          pkill -f "vite preview" || true
+
+  autonomous-boundary-proof:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    needs: build-artifact
+    steps:
+      - name: Checkout
+        run: |
+          git clone "https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}.git" .
+          git checkout "${{ github.ref_name }}"
+
+      - name: Set up Node.js
+        run: |
+          curl -fsSL https://deb.nodesource.com/setup_20.x | sudo bash -
+          sudo apt-get install -y nodejs
+          node --version
+          npm --version
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build production artifact
+        run: npm run ci:build
+
+      - name: Install Playwright
+        run: npx playwright install --with-deps chromium
+
+      - name: Run autonomous boundary proof
+        env:
+          SMOKE_TIMEOUT_MS: "90000"
+          AUTONOMY_RECOVERY_WAIT_MS: "22000"
+        run: npm run ci:autonomous-boundary-proof
+
+  legacy-test-audit:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    continue-on-error: true
+    steps:
+      - name: Checkout
+        run: |
+          git clone "https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}.git" .
+          git checkout "${{ github.ref_name }}"
+
+      - name: Set up Node.js
+        run: |
+          curl -fsSL https://deb.nodesource.com/setup_20.x | sudo bash -
+          sudo apt-get install -y nodejs
+          node --version
+          npm --version
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run legacy Jest audit
+        run: npm test -- --runInBand
