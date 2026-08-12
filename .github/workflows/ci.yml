@@ -4,14 +4,51 @@ on:
   push:
     branches:
       - main
+  pull_request:
+    branches:
+      - main
   workflow_dispatch:
 
+concurrency:
+  group: hyperai-ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
 jobs:
-  smoke:
+  build-artifact:
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     steps:
-      - name: Hello from remote CI
+      - name: Checkout
         run: |
-          echo "Repository ${{ github.repository }}"
-          echo "Branch ${{ github.ref_name }}"
-          echo "Remote CI is reachable"
+          git clone "https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}.git" .
+          git checkout "${{ github.ref_name }}"
+
+      - name: Set up Node.js
+        run: |
+          curl -fsSL https://deb.nodesource.com/setup_20.x | bash -
+          apt-get install -y nodejs
+          node --version
+          npm --version
+
+      - name: Set up Python
+        run: |
+          apt-get update
+          apt-get install -y python3.11 python3.11-pip
+          python3.11 --version
+
+      - name: Configure product git identity
+        run: |
+          python3.11 scripts/ci/configure_git_identity.py \
+            --scope product \
+            --git-name "NguyenCuong1989" \
+            --product-email "nguyencuong.2509@icloud.com" \
+            --ecosystem-email "nguyencuong.2509@icloud.com" | tee identity.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build production artifact
+        run: npm run ci:build
