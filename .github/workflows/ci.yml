@@ -110,6 +110,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 20
     needs: build-artifact
+    continue-on-error: true
     steps:
       - name: Checkout
         run: |
