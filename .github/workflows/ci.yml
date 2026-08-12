@@ -29,14 +29,14 @@ jobs:
       - name: Set up Node.js and Python
         run: |
           curl -fsSL https://deb.nodesource.com/setup_20.x | sudo bash -
-          sudo apt-get install -y nodejs python3.11 python3.11-pip
+          sudo apt-get install -y nodejs python3 python3-pip
           node --version
           npm --version
-          python3.11 --version
+          python3 --version
 
       - name: Configure product git identity
         run: |
-          python3.11 scripts/ci/configure_git_identity.py \
+          python3 scripts/ci/configure_git_identity.py \
             --scope product \
             --git-name "NguyenCuong1989" \
             --product-email "nguyencuong.2509@icloud.com" \
