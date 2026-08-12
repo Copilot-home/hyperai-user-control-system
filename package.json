@@ -6,7 +6,7 @@
     "scripts":  {
                     "start":  "vite",
                     "preview:ci":  "vite preview --host 127.0.0.1 --port 4173",
-                    "build":  "vite build",
+                    "build":  "node scripts/tooling/run-vite-build.mjs",
                     "ci:build":  "node scripts/tooling/run-vite-build.mjs",
                     "ci:docker-surface":  "node scripts/ci/validate-docker-surface.mjs",
                     "ci:browser-smoke":  "node scripts/ci/browser-agent-smoke.mjs",
