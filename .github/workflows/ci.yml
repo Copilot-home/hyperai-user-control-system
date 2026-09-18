@@ -20,7 +20,6 @@ jobs:
   docker-surface-audit:
     runs-on: ubuntu-latest
     timeout-minutes: 10
-    continue-on-error: true
     steps:
       - name: Checkout
         run: |
@@ -110,7 +109,6 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 20
     needs: build-artifact
-    continue-on-error: true
     steps:
       - name: Checkout
         run: |
