@@ -37,7 +37,17 @@ export const getWorkspaceConnectors = async (): Promise<WorkspaceGraphResponse['
 
 export const getWorkspaceMissions = async (): Promise<WorkspaceMissionsResponse> => {
     const response = await axios.get<WorkspaceMissionsResponse>(`${getApiBaseUrl()}/workspace/missions`);
-    return response.data;
+    const rawBindings = response.data?.bindings as unknown;
+    const bindings = Array.isArray(rawBindings)
+        ? rawBindings as WorkspaceMissionsResponse['bindings']
+        : rawBindings && typeof rawBindings === 'object'
+            ? Object.values(rawBindings) as WorkspaceMissionsResponse['bindings']
+            : [];
+
+    return {
+        ...response.data,
+        bindings,
+    };
 };
 
 export const createWorkspaceMission = async (payload: Record<string, unknown>): Promise<Record<string, unknown>> => {
