@@ -97,6 +97,7 @@ const persistBoundarySnapshot = (snapshot: BoundaryAutonomySnapshot | null): voi
 const buildBoundarySnapshot = (
     capabilities: RuntimeCapabilitiesResponse | null,
     status: AutonomyStatus | null,
+    policy: AutonomyPolicyState | null,
     recoveryAttempts: number
 ): BoundaryAutonomySnapshot | null => {
     if (!capabilities && !status) {
@@ -104,14 +105,22 @@ const buildBoundarySnapshot = (
     }
 
     const selectedAction = capabilities?.runtime_recovery?.selectedAction ?? capabilities?.selected_action;
+    const policyAction = policy?.selected_action;
+    const policyBoundaryState = policy?.boundary_state ?? policy?.haios_state;
+    const policyConfirmsAutonomous =
+        policyBoundaryState === 'autonomous' &&
+        ['reuse_default_runtime', 'reuse_managed_runtime', 'hold_current_runtime'].includes(policyAction ?? '');
     const derivedRecoveryAction = deriveRecoveryAction(capabilities);
-    const boundaryState = capabilities?.boundary_state ?? (status?.active ? 'operational' : 'recoverable');
+    const boundaryState = policyConfirmsAutonomous
+        ? 'autonomous'
+        : capabilities?.boundary_state ?? (status?.active ? 'operational' : 'recoverable');
     const recoveryAction =
         derivedRecoveryAction === 'none' && !status?.active && boundaryState === 'recoverable'
             ? 'start-runtime'
             : derivedRecoveryAction;
 
     const classificationReason =
+        (policyConfirmsAutonomous ? policy?.action_reason || policy?.boundary_reason : null) ??
         capabilities?.boundary_reason ??
         capabilities?.authority_reason ??
         status?.heartbeat?.detail ??
@@ -196,8 +205,8 @@ export const AutonomyProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     }, []);
 
     const boundaryState = useMemo(
-        () => buildBoundarySnapshot(runtimeCapabilities, status, recoveryAttempts),
-        [recoveryAttempts, runtimeCapabilities, status]
+        () => buildBoundarySnapshot(runtimeCapabilities, status, policy, recoveryAttempts),
+        [policy, recoveryAttempts, runtimeCapabilities, status]
     );
 
     useEffect(() => {
