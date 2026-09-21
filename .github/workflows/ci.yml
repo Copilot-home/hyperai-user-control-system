@@ -102,23 +102,6 @@ jobs:
           SMOKE_TIMEOUT_MS: "60000"
         run: npm run ci:browser-smoke
 
-      - name: Collect browser diagnostics
-        if: failure()
-        run: |
-          mkdir -p ci-artifacts/browser-smoke
-          cp -f backend.log ci-artifacts/browser-smoke/backend.log 2>/dev/null || true
-          cp -f preview.log ci-artifacts/browser-smoke/preview.log 2>/dev/null || true
-          cp -f ../runtime/verification/browser-smoke-failure.* ci-artifacts/browser-smoke/ 2>/dev/null || true
-          cp -f ../runtime/verification/auto_sync_state.json ci-artifacts/browser-smoke/ 2>/dev/null || true
-
-      - name: Upload browser diagnostics
-        if: failure()
-        uses: actions/upload-artifact@v4
-        with:
-          name: browser-smoke-diagnostics
-          path: ci-artifacts/browser-smoke
-          if-no-files-found: warn
-
       - name: Stop background services
         if: always()
         run: |
