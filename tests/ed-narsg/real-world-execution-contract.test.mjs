@@ -63,6 +63,24 @@ test('preserves unknown mutation state and blocks commit', () => {
   assert.equal(c.status, 'UNKNOWN');
 });
 
+test('terminal execution contracts cannot be reactivated', () => {
+  let blocked = base();
+  blocked = advanceExecutionContract(blocked, { status: 'BLOCKED', reason: 'blocked-by-policy' });
+  assert.throws(
+    () => advanceExecutionContract(blocked, { next_phase: 'AUTHORIZATION' }),
+    /EXECUTION_CONTRACT_TERMINAL/,
+  );
+
+  let unknown = base();
+  unknown = advanceExecutionContract(unknown, { next_phase: 'AUTHORIZATION' });
+  unknown = advanceExecutionContract(unknown, { next_phase: 'EXECUTION' });
+  unknown = advanceExecutionContract(unknown, { next_phase: 'OBSERVATION', mutation_state: 'UNKNOWN' });
+  assert.throws(
+    () => advanceExecutionContract(unknown, { next_phase: 'EVIDENCE', evidence: [{ id: 'e1' }] }),
+    /EXECUTION_CONTRACT_TERMINAL/,
+  );
+});
+
 test('requires independent verification before commit', () => {
   let c = base();
   c = advanceExecutionContract(c, { next_phase: 'AUTHORIZATION' });
