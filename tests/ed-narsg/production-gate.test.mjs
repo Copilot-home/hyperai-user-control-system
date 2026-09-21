@@ -35,7 +35,8 @@ test('requires remediation for historical credential exposure', () => {
     },
     dependency_security: { verified: true },
   });
-  assert.equal(result.status, 'REMEDIATION_REQUIRED');
+  assert.equal(result.status, 'BLOCKED');
+  assert.equal(result.remediation_required, true);
   assert.deepEqual(result.blockers, ['CREDENTIAL_ROTATION_REQUIRED']);
 });
 
