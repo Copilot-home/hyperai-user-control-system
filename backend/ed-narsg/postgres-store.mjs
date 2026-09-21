@@ -65,7 +65,12 @@ export function createPostgresRepository(pool) {
         pool.query('SELECT event_id AS id, aggregate_id, sequence, event_type, schema_version, created_at, correlation_id, causation_id, source, payload, previous_hash, event_hash FROM ' + DURABLE_TABLES.events + ' WHERE aggregate_id=$1 ORDER BY sequence ASC',[aggregateId]),
         pool.query('SELECT aggregate_id, state_version, state, last_event_id, updated_at FROM ' + DURABLE_TABLES.projections + ' WHERE aggregate_id=$1',[aggregateId]),
       ]);
-      return {events:events.rows,projection:projection.rows[0] || null};
+      const normalizedEvents = events.rows.map((event) => ({
+        ...event,
+        sequence: Number(event.sequence),
+        created_at: new Date(event.created_at).toISOString(),
+      }));
+      return {events: normalizedEvents,projection:projection.rows[0] || null};
     },
   });
 }
