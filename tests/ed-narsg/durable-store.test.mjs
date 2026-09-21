@@ -25,7 +25,7 @@ test('append event and projection are one repository transaction', async () => {
     async loadAggregate(id) { return { id }; },
   });
 
-  await store.appendEvent({ id: 'e1', aggregate_id: 'r1', sequence: 0, event_hash: 'h', schema_version: '1.0' }, { aggregate_id: 'r1' });
+  await store.appendEvent({ id: 'e1', aggregate_id: 'r1', sequence: 0, event_type: 'T', event_hash: 'h', schema_version: '1.0', created_at: '2026-09-22T00:00:00.000Z', correlation_id: 'c' }, { aggregate_id: 'r1' });
   assert.deepEqual(calls, ['begin', ['event', 'e1'], ['projection', 'r1'], 'commit']);
 });
 
