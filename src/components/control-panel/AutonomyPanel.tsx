@@ -34,7 +34,12 @@ export const AutonomyPanel: React.FC = () => {
         markHealthy,
         markDegraded,
     } = useAutonomy();
-    const ecosystemRegistry = runtimeCapabilities?.ecosystem_registry ?? [];
+    const ecosystemRegistry = Array.isArray(runtimeCapabilities?.ecosystem_registry) ? runtimeCapabilities.ecosystem_registry : [];
+    const safeObjectives = Array.isArray(objectives) ? objectives : [];
+    const safeDecisions = Array.isArray(decisions) ? decisions : [];
+    const safeRecentActions = Array.isArray(status?.recentActions) ? status.recentActions : [];
+    const heartbeatStatus = status?.heartbeat?.status ?? 'unknown';
+    const schedulerTicks = status?.metrics?.ticks ?? 0;
 
     const runAction = async (action: () => Promise<void>) => {
         try {
@@ -81,7 +86,7 @@ export const AutonomyPanel: React.FC = () => {
                         </div>
                         <div className={styles.metricCard}>
                             <div className={styles.metricLabel}>Heartbeat</div>
-                            <div className={styles.metricValue}>{status.heartbeat.status}</div>
+                            <div className={styles.metricValue}>{heartbeatStatus}</div>
                         </div>
                         <div className={styles.metricCard}>
                             <div className={styles.metricLabel}>Active Lane</div>
@@ -93,7 +98,7 @@ export const AutonomyPanel: React.FC = () => {
                         </div>
                         <div className={styles.metricCard}>
                             <div className={styles.metricLabel}>Scheduler Ticks</div>
-                            <div className={styles.metricValue}>{status.metrics.ticks}</div>
+                            <div className={styles.metricValue}>{schedulerTicks}</div>
                         </div>
                         <div className={styles.metricCard}>
                             <div className={styles.metricLabel}>Last Action</div>
@@ -226,7 +231,7 @@ export const AutonomyPanel: React.FC = () => {
                     </div>
                     <h3 className={styles.sectionTitle}>Objectives</h3>
                     <ul className={styles.list}>
-                        {objectives.map((objective) => (
+                        {safeObjectives.map((objective) => (
                             <li key={objective.id} className={styles.listItem}>
                                 <div className={styles.listTop}>
                                     <strong>{objective.title}</strong>
@@ -240,7 +245,7 @@ export const AutonomyPanel: React.FC = () => {
                     </ul>
                     <h3 className={styles.sectionTitle}>Recent Actions</h3>
                     <ul className={styles.list}>
-                        {status.recentActions.map((action) => (
+                        {safeRecentActions.map((action) => (
                             <li key={`${action.at}-${action.type}`} className={styles.listItem}>
                                 <div className={styles.listTop}>
                                     <strong>{action.type}</strong>
@@ -252,12 +257,12 @@ export const AutonomyPanel: React.FC = () => {
                     </ul>
                     <h3 className={styles.sectionTitle}>Recovery Decisions</h3>
                     <ul className={styles.list}>
-                        {decisions.length === 0 && (
+                        {safeDecisions.length === 0 && (
                             <li className={styles.listItem}>
                                 <p className={styles.detail}>No autonomous recovery decisions recorded yet.</p>
                             </li>
                         )}
-                        {decisions.map((decision, index) => (
+                        {safeDecisions.map((decision, index) => (
                             <li key={`${decision.at}-${decision.action}-${index}`} className={styles.listItem}>
                                 <div className={styles.listTop}>
                                     <strong>{decision.action}</strong>
