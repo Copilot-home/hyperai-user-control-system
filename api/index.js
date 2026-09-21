@@ -8,10 +8,21 @@
 
 const UPSTREAM = process.env.HYPERAI_UPSTREAM_URL || '';
 
-function getTargetPath(req) {
+export function getTargetPath(req) {
   const queryPath = req.query?.path;
   if (typeof queryPath === 'string') {
-    return `/api/${queryPath}`;
+    const target = `/api/${queryPath}`;
+    const query = new URLSearchParams();
+    for (const [key, value] of Object.entries(req.query || {})) {
+      if (key === 'path' || value === undefined || value === null) continue;
+      if (Array.isArray(value)) {
+        for (const item of value) query.append(key, String(item));
+      } else {
+        query.append(key, String(value));
+      }
+    }
+    const encodedQuery = query.toString();
+    return encodedQuery ? `${target}?${encodedQuery}` : target;
   }
   if (req.url.startsWith('/api/')) {
     return req.url;
