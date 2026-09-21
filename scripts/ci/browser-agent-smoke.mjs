@@ -521,7 +521,9 @@ async function verifyBrowser() {
       } catch (diagnosticError) {
         console.warn("Unable to persist browser diagnostics:", diagnosticError);
       }
-      throw error;
+      throw new Error(
+        `Conversation Core not visible. snapshot=${JSON.stringify(diagnosticSnapshot)} page_errors=${JSON.stringify(browserDiagnostics.page_errors)} console=${JSON.stringify(browserDiagnostics.console.slice(-20))}`
+      );
     }
 
     const bodyText = await page.locator("body").innerText();
