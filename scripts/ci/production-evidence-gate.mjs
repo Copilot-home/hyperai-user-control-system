@@ -66,11 +66,22 @@ function parseAudit(stdout) {
     const critical = Number(counts.critical || 0);
     const total = Object.values(counts).reduce((sum, value) => sum + Number(value || 0), 0);
 
+    const vulnerabilities = Object.entries(report.vulnerabilities || {})
+      .filter(([, item]) => ['high', 'critical'].includes(item.severity))
+      .map(([name, item]) => ({
+        name,
+        severity: item.severity,
+        isDirect: Boolean(item.isDirect),
+        via: Array.isArray(item.via) ? item.via.slice(0, 8) : [],
+        fixAvailable: item.fixAvailable ?? false,
+      }));
+
     if (critical > 0 || high > 0) {
       return {
         verified: false,
         reason: 'DEPENDENCY_SECURITY_HIGH_OR_CRITICAL',
         counts,
+        vulnerabilities,
       };
     }
 
