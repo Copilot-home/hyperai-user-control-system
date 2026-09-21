@@ -224,6 +224,7 @@ jobs:
         run: npm install --no-audit --no-fund
       - name: Run real PostgreSQL durability proof
         env:
+          ED_NARSG_POSTGRES_INTEGRATION: "true"
           PGHOST: 127.0.0.1
           PGPORT: 5432
           PGUSER: postgres
