@@ -191,35 +191,6 @@ jobs:
       - name: Generate production evidence classification
         run: npm run ci:production-evidence-gate
 
-  lockfile-regeneration:
-    runs-on: ubuntu-latest
-    permissions:
-      contents: write
-    steps:
-      - name: Checkout
-        run: |
-          git clone "https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}.git" .
-          git fetch --no-tags origin "${{ github.ref }}"
-          git checkout --detach FETCH_HEAD
-      - name: Set up Node.js
-        run: |
-          curl -fsSL https://deb.nodesource.com/setup-20.x | sudo bash -
-          sudo apt-get install -y nodejs
-          node --version
-          npm --version
-      - name: Regenerate npm lockfile and commit
-        run: |
-          npm install --package-lock-only --ignore-scripts --no-audit --no-fund
-          if git diff --quiet -- package-lock.json; then
-            echo "LOCKFILE_ALREADY_IN_SYNC"
-            exit 0
-          fi
-          git config user.name "hyperai-lock-repair"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add package-lock.json
-          git commit -m "chore(ci): regenerate npm lockfile"
-          git push origin HEAD:${GITHUB_REF_NAME}
-
   durable-postgres-integration:
     runs-on: ubuntu-latest
     timeout-minutes: 15
