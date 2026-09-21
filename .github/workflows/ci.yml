@@ -24,7 +24,8 @@ jobs:
       - name: Checkout
         run: |
           git clone "https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}.git" .
-          git checkout "${{ github.ref_name }}"
+          git fetch --no-tags origin "${{ github.ref }}"
+          git checkout --detach FETCH_HEAD
 
       - name: Validate Docker surface
         run: node scripts/ci/validate-docker-surface.mjs
@@ -36,7 +37,8 @@ jobs:
       - name: Checkout
         run: |
           git clone "https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}.git" .
-          git checkout "${{ github.ref_name }}"
+          git fetch --no-tags origin "${{ github.ref }}"
+          git checkout --detach FETCH_HEAD
 
       - name: Set up Node.js and Python
         run: |
@@ -68,7 +70,8 @@ jobs:
       - name: Checkout
         run: |
           git clone "https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}.git" .
-          git checkout "${{ github.ref_name }}"
+          git fetch --no-tags origin "${{ github.ref }}"
+          git checkout --detach FETCH_HEAD
 
       - name: Set up Node.js
         run: |
@@ -113,7 +116,8 @@ jobs:
       - name: Checkout
         run: |
           git clone "https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}.git" .
-          git checkout "${{ github.ref_name }}"
+          git fetch --no-tags origin "${{ github.ref }}"
+          git checkout --detach FETCH_HEAD
 
       - name: Set up Node.js
         run: |
@@ -145,7 +149,8 @@ jobs:
       - name: Checkout
         run: |
           git clone "https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}.git" .
-          git checkout "${{ github.ref_name }}"
+          git fetch --no-tags origin "${{ github.ref }}"
+          git checkout --detach FETCH_HEAD
 
       - name: Set up Node.js
         run: |
