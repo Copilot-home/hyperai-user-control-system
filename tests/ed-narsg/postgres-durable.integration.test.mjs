@@ -5,6 +5,11 @@ import { createEvent, appendEvent, verifyEventChain, replayEvents } from '../../
 import { createDurableStore } from '../../backend/ed-narsg/durable-store.mjs';
 import { createPostgresPool, createPostgresRepository, migratePostgres } from '../../backend/ed-narsg/postgres-store.mjs';
 
+const integrationEnabled = process.env.ED_NARSG_POSTGRES_INTEGRATION === 'true';
+
+if (!integrationEnabled) {
+  test('PostgreSQL durability integration', { skip: 'ED_NARSG_POSTGRES_INTEGRATION is not enabled.' }, () => {});
+} else {
 const migration = await readFile(new URL('../../migrations/ed_narsg/001_durable_core.sql', import.meta.url), 'utf8');
 const cfg = { host: process.env.PGHOST || '127.0.0.1', port: process.env.PGPORT ? Number(process.env.PGPORT) : 5432, user: process.env.PGUSER || 'postgres', password: process.env.PGPASSWORD || 'postgres', database: process.env.PGDATABASE || 'postgres' };
 let pool = createPostgresPool(cfg);
@@ -27,7 +32,7 @@ test('real PostgreSQL durable append replay and restart recovery', async () => {
   const loaded = await repository.loadAggregate(aggregate);
   assert.equal(loaded.events.length, 2);
   assert.equal(loaded.projection.state.status, 'VERIFIED');
-  assert.deepEqual(loaded.events.map((event) => event.sequence), [0, 1]);
+  assert.deepEqual(loaded.events.map((event) => Number(event.sequence)), [0, 1]);
   verifyEventChain(events);
   assert.deepEqual(replayEvents(events, (state, event) => ({ ...state, last: event.event_type }), {}), { last: 'VERIFIED' });
   await pool.end();
@@ -69,3 +74,5 @@ after(async () => {
   await pool.query('DELETE FROM ed_narsg_events WHERE aggregate_id LIKE $1', [prefix + '%']).catch(() => {});
   await pool.end().catch(() => {});
 });
+
+}
