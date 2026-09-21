@@ -302,7 +302,7 @@ function buildManagedPayload({ runtime, backendPort, frontendPort, backendPid, f
     boundaryState: runtime.boundaryState,
     autonomousCoreReady: runtime.autonomousCoreReady,
     operatorAttentionRequired: runtime.operatorAttentionRequired,
-    selected_action: "start_managed_runtime",
+    selected_action: "reuse_managed_runtime",
     runtime_strategy: "managed_runtime_active",
     coreBoundary: runtime.coreBoundary,
     nonCoreOperationalLanes: runtime.nonCoreOperationalLanes,
