@@ -7,7 +7,7 @@ import { assertJevWorkerAttestation } from '../../backend/ed-narsg/jev-worker-at
 const execFileAsync = promisify(execFile);
 
 async function probeUrl(base, path, validator) {
-  if (!base) return { verified: false, reason: 'EVIDENCE_MISSING' };
+  if (!base) return {};
 
   let url;
   try {
