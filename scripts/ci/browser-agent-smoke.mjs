@@ -475,7 +475,7 @@ async function verifyBrowser() {
     await page.goto(FRONTEND_URL, { waitUntil: "domcontentloaded", timeout: TIMEOUT_MS });
     await page.waitForLoadState("domcontentloaded");
     try {
-      await page.locator("body").waitFor({ state: "visible", timeout: Math.min(TIMEOUT_MS, 10000) });
+      await page.getByText("Conversation Core", { exact: true }).waitFor({ state: "visible", timeout: Math.min(TIMEOUT_MS, 10000) });
     } catch (error) {
       const diagnosticsDir = path.join(runtimeDir, "verification");
       try {
@@ -516,22 +516,20 @@ async function verifyBrowser() {
 
     await page.getByRole("button", { name: "Promote to mission" }).click();
     await page.goto(`${FRONTEND_URL}/missions`, { waitUntil: "domcontentloaded", timeout: TIMEOUT_MS });
-    await page.locator("body").waitFor({ state: "visible", timeout: TIMEOUT_MS });
+    await page.getByText("Mission Board", { exact: false }).waitFor({ state: "visible", timeout: TIMEOUT_MS });
     if (!page.url().endsWith("/missions")) {
       throw new Error(`Expected missions route after promotion, saw ${page.url()}`);
     }
 
     await page.goto(`${FRONTEND_URL}/systems`, { waitUntil: "domcontentloaded", timeout: TIMEOUT_MS });
-    await page.locator("body").waitFor({ state: "visible", timeout: TIMEOUT_MS });
-    await page.getByText("System Graph", { exact: false }).waitFor({ timeout: TIMEOUT_MS });
+    await page.getByText("System Graph", { exact: false }).waitFor({ state: "visible", timeout: TIMEOUT_MS });
 
     await page.goto(`${FRONTEND_URL}/symphony-control`, { waitUntil: "domcontentloaded", timeout: TIMEOUT_MS });
-    await page.locator("body").waitFor({ state: "visible", timeout: TIMEOUT_MS });
-    await page.getByText("Symphony Control Panel", { exact: false }).waitFor({ timeout: TIMEOUT_MS });
+    await page.getByText("Symphony Control Panel", { exact: false }).waitFor({ state: "visible", timeout: TIMEOUT_MS });
 
     if (restoreSymphonyAfterBrowser) {
       await page.goto(FRONTEND_URL, { waitUntil: "domcontentloaded", timeout: TIMEOUT_MS });
-      await page.locator("body").waitFor({ state: "visible", timeout: TIMEOUT_MS });
+      await page.getByText("Conversation Core", { exact: true }).waitFor({ state: "visible", timeout: TIMEOUT_MS });
     }
 
     const title = await page.title();
