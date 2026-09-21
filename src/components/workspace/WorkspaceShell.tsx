@@ -543,7 +543,7 @@ const WorkspaceShell: React.FC<WorkspaceShellProps> = ({ initialTab = 'overview'
                             </div>
                             <div className={styles.panelCard}>
                                 <h3>System-owned runtimes</h3>
-                                <p>{runtimes.length} runtime nodes available in the workspace graph.</p>
+                                <p>{Array.isArray(runtimes) ? runtimes.length : 0} runtime nodes available in the workspace graph.</p>
                                 <p>System-owned app runtimes duoc render nhu sub-workspaces, khong chi la connector.</p>
                             </div>
                             <div className={styles.panelCard}>
