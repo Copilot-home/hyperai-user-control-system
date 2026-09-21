@@ -218,7 +218,7 @@ export function createVerificationSyncEngine({ projectRoot, runtimeDir, source }
     try {
       const requestedUrl = new URL(route, frontendUrl).toString();
       await page.goto(requestedUrl, { waitUntil: "domcontentloaded", timeout: timeoutMs });
-      await page.locator("body").waitFor({ state: "visible", timeout: timeoutMs });
+      await page.locator("body").waitFor({ state: "attached", timeout: timeoutMs });
 
       const selectorResults = [];
       for (const selector of selectors) {
