@@ -178,15 +178,43 @@ async function verifyBrowserShell({ frontendUrl }) {
     await page.getByText("Boundary State", { exact: true }).waitFor({ timeout: timeoutMs });
     await page.getByText("Autonomous Policy Authority", { exact: true }).waitFor({ timeout: timeoutMs });
 
-    await page.waitForFunction(() => {
+    try {
+      await page.waitForFunction(() => {
+        try {
+          const raw = window.localStorage.getItem("hyperai_autonomy_boundary_snapshot");
+          const state = raw ? JSON.parse(raw) : null;
+          return state?.state === "autonomous";
+        } catch {
+          return false;
+        }
+      }, null, { timeout: Math.min(timeoutMs, 15000) });
+    } catch (error) {
+      const diagnostics = await page.evaluate(() => ({
+        href: window.location.href,
+        snapshot: window.localStorage.getItem("hyperai_autonomy_boundary_snapshot"),
+        runtimeAuthority: window.localStorage.getItem("hyperai.runtime.authority"),
+        override: window.localStorage.getItem("hyperai_runtime_api_origin"),
+      }));
+      let capabilities = null;
       try {
-        const raw = window.localStorage.getItem("hyperai_autonomy_boundary_snapshot");
-        const state = raw ? JSON.parse(raw) : null;
-        return state?.state === "autonomous";
-      } catch {
-        return false;
+        const response = await page.evaluate(async () => {
+          const raw = window.localStorage.getItem("hyperai.runtime.authority");
+          const authority = raw ? JSON.parse(raw) : null;
+          const origin = authority?.apiOrigin || "http://localhost:5000";
+          const result = await fetch(`${origin}/api/runtime/capabilities`);
+          return { status: result.status, body: await result.json() };
+        });
+        capabilities = response;
+      } catch (probeError) {
+        capabilities = { error: probeError instanceof Error ? probeError.message : String(probeError) };
       }
-    }, null, { timeout: Math.min(timeoutMs, 15000) });
+      console.error("[autonomous-boundary-proof] browser convergence diagnostics", JSON.stringify({
+        error: error instanceof Error ? error.message : String(error),
+        diagnostics,
+        capabilities,
+      }));
+      throw error;
+    }
 
     const shellState = await page.evaluate(() => {
       const raw = window.localStorage.getItem("hyperai_autonomy_boundary_snapshot");
