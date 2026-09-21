@@ -62,7 +62,7 @@ async function packageLockIntegrityEvidence() {
 
 async function dependencyEvidence() {
   try {
-    const { stdout } = await execFileAsync('npm', ['audit', '--json'], {
+    const { stdout } = await execFileAsync('npm', ['audit', '--omit=dev', '--json'], {
       timeout: 120000,
       maxBuffer: 10 * 1024 * 1024,
     });
