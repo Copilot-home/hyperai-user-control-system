@@ -3,6 +3,7 @@ const REQUIRED_GATES = [
   ['jev_worker', 'JEV_WORKER_EVIDENCE_MISSING'],
   ['credential_hygiene', 'CREDENTIAL_HYGIENE_EVIDENCE_MISSING'],
   ['dependency_security', 'DEPENDENCY_SECURITY_EVIDENCE_MISSING'],
+  ['package_lock_integrity', 'PACKAGE_LOCK_INTEGRITY_EVIDENCE_MISSING'],
 ];
 
 function normalizeGate(name, evidence) {
