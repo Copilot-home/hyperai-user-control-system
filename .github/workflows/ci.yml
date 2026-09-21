@@ -189,6 +189,9 @@ jobs:
       - name: Run runtime dependency security audit
         run: npm audit --omit=dev --audit-level=low
 
+      - name: Validate Jev worker Python boundary
+        run: python3 -m py_compile jev-worker/server.py
+
       - name: Run E-D NARSG contract tests
         run: npm run test:ed-narsg
 
