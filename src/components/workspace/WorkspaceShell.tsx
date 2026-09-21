@@ -289,7 +289,7 @@ const WorkspaceShell: React.FC<WorkspaceShellProps> = ({ initialTab = 'overview'
                                     <strong>{node.label}</strong>
                                     <span>{node.orchestrator_family}</span>
                                     <span>{node.node_origin}</span>
-                                    <span>proof: {node.proof_state.fresh ? 'fresh' : 'stale'}</span>
+                                    <span>proof: {node.proof_state?.fresh ? 'fresh' : 'stale'}</span>
                                 </div>
                             ))}
                         </div>
@@ -488,7 +488,7 @@ const WorkspaceShell: React.FC<WorkspaceShellProps> = ({ initialTab = 'overview'
                     <div className={styles.railSection}>
                         <h2>Companion Rail</h2>
                         <p>{String(session?.companion?.preferred_approval_surface?.process_name || 'No preferred approval surface detected.')}</p>
-                        <p className={styles.smallText}>Active creator surfaces: {session?.companion?.active_creator_surfaces.length || 0}</p>
+                        <p className={styles.smallText}>Active creator surfaces: {session?.companion?.active_creator_surfaces?.length || 0}</p>
                     </div>
                     <div className={styles.railSection}>
                         <h3>AI lanes</h3>
@@ -548,7 +548,7 @@ const WorkspaceShell: React.FC<WorkspaceShellProps> = ({ initialTab = 'overview'
                             </div>
                             <div className={styles.panelCard}>
                                 <h3>Observed collisions</h3>
-                                <p>{proof?.collisions.length || 0} collision(s) in drift guard.</p>
+                                <p>{proof?.collisions?.length || 0} collision(s) in drift guard.</p>
                                 <p>{error || 'Workspace shell dang on dinh.'}</p>
                             </div>
                             <div className={styles.panelCard}>
@@ -599,7 +599,7 @@ const WorkspaceShell: React.FC<WorkspaceShellProps> = ({ initialTab = 'overview'
                                      <p>maturity: {node.current_maturity || 'unmapped'}</p>
                                      <p>connector: {node.connector_binding || 'unbound'}</p>
                                     <p>roles: {node.allowed_mission_roles.join(', ') || 'none'}</p>
-                                    <p>proof: {node.proof_state.fresh ? 'fresh' : 'stale'}</p>
+                                    <p>proof: {node.proof_state?.fresh ? 'fresh' : 'stale'}</p>
                                 </div>
                             ))}
                         </div>
@@ -660,8 +660,8 @@ const WorkspaceShell: React.FC<WorkspaceShellProps> = ({ initialTab = 'overview'
                                 <div key={provider.node_id} className={styles.listCard}>
                                     <h3>{provider.label}</h3>
                                     <p>status: {provider.status}</p>
-                                    <p>reasoning: {provider.reasoning_capability.join(', ') || 'none'}</p>
-                                    <p>behavior: {provider.behavior_capability.join(', ') || 'none'}</p>
+                                    <p>reasoning: {(provider.reasoning_capability || []).join(', ') || 'none'}</p>
+                                    <p>behavior: {(provider.behavior_capability || []).join(', ') || 'none'}</p>
                                 </div>
                             ))}
                         </div>
