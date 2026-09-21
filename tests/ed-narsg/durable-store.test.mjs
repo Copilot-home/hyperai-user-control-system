@@ -4,8 +4,8 @@ import { createDurableStore, validateDurableEvent } from '../../backend/ed-narsg
 
 test('durable event requires identity, sequence and provenance', () => {
   assert.throws(() => validateDurableEvent({}), /DURABLE_EVENT_IDENTITY_INVALID/);
-  assert.throws(() => validateDurableEvent({ id: 'e', aggregate_id: 'r', sequence: 0 }), /DURABLE_EVENT_PROVENANCE_INVALID/);
-  assert.equal(validateDurableEvent({ id: 'e', aggregate_id: 'r', sequence: 0, event_hash: 'h', schema_version: '1.0' }), true);
+  assert.throws(() => validateDurableEvent({ id: 'e', aggregate_id: 'r', sequence: 0, event_type: 'T' }), /DURABLE_EVENT_PROVENANCE_INVALID/);
+  assert.equal(validateDurableEvent({ id: 'e', aggregate_id: 'r', sequence: 0, event_type: 'T', event_hash: 'h', schema_version: '1.0', created_at: '2026-09-22T00:00:00.000Z', correlation_id: 'c' }), true);
 });
 
 test('append event and projection are one repository transaction', async () => {
