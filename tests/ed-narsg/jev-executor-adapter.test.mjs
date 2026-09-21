@@ -54,6 +54,13 @@ test('Jev action must reference an observed indexed target, never a selector', (
   );
 });
 
+test('DONE is an executor decision, not proof of a committed outcome', () => {
+  const execution = authorizeJevAction(base(), { operation: 'DONE' });
+  assert.equal(execution.action.operation, 'DONE');
+  assert.equal(execution.contract.phase, 'AUTHORIZATION');
+  assert.equal(execution.contract.status, 'PENDING');
+});
+
 test('unacknowledged browser mutation remains UNKNOWN and cannot commit', () => {
   const authorized = authorizeJevAction(base(), {
     operation: 'CLICK',
