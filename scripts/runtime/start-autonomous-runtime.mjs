@@ -193,7 +193,8 @@ function spawnDetached(command, args, env) {
 
 async function runBuild(env) {
   await new Promise((resolve, reject) => {
-    const build = spawn("cmd.exe", ["/c", "npm run ci:build:isolated"], {
+    const npmCommand = process.platform === "win32" ? "npm.cmd" : "npm";
+    const build = spawn(npmCommand, ["run", "ci:build:isolated"], {
       cwd: projectRoot,
       env: { ...process.env, ...env },
       stdio: "inherit",
