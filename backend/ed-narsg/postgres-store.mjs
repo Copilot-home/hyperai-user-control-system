@@ -85,8 +85,10 @@ export function createPostgresRepository(pool) {
       ]);
       const normalizedEvents = events.rows.map((event) => ({
         ...event,
+        type: 'Event',
         sequence: Number(event.sequence),
         created_at: new Date(event.created_at).toISOString(),
+        payload: event.payload ?? {},
       }));
       const normalizedProjection = projection.rows[0]
         ? { ...projection.rows[0], state_version: Number(projection.rows[0].state_version) }
