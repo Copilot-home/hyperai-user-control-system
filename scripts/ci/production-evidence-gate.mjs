@@ -40,6 +40,25 @@ async function probeUrl(base, path, validator) {
   }
 }
 
+async function packageLockIntegrityEvidence() {
+  try {
+    const { stdout: packageJsonText } = await execFileAsync('node', ['-e', "process.stdout.write(require('fs').readFileSync('package.json','utf8'))"]);
+    const { stdout: lockText } = await execFileAsync('node', ['-e', "process.stdout.write(require('fs').readFileSync('package-lock.json','utf8'))"]);
+    const packageJson = JSON.parse(packageJsonText);
+    const lock = JSON.parse(lockText);
+    const expected = { ...(packageJson.dependencies || {}), ...(packageJson.devDependencies || {}) };
+    const locked = lock.packages?.['']?.dependencies || {};
+    const mismatches = [];
+    for (const [name, range] of Object.entries(expected)) {
+      if (locked[name] !== range) mismatches.push({ name, package_json: range, package_lock: locked[name] ?? null });
+    }
+    if (mismatches.length) return { verified: false, reason: 'PACKAGE_LOCK_OUT_OF_SYNC', mismatches };
+    return { verified: true, checked: Object.keys(expected).length };
+  } catch (error) {
+    return { verified: false, reason: 'PACKAGE_LOCK_INTEGRITY_EVIDENCE_UNAVAILABLE', detail: error instanceof Error ? error.message : String(error) };
+  }
+}
+
 async function dependencyEvidence() {
   try {
     const { stdout } = await execFileAsync('npm', ['audit', '--json'], {
@@ -124,12 +143,14 @@ const credentialHygiene = process.env.HYPERAI_CREDENTIAL_ROTATION_VERIFIED === '
     };
 
 const dependencySecurity = await dependencyEvidence();
+const packageLockIntegrity = await packageLockIntegrityEvidence();
 const evidence = {
   generated_at: new Date().toISOString(),
   upstream,
   jev_worker: jevWorker,
   credential_hygiene: credentialHygiene,
   dependency_security: dependencySecurity,
+  package_lock_integrity: packageLockIntegrity,
 };
 
 const classification = classifyProductionGate(evidence);
