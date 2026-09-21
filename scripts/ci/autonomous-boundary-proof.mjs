@@ -149,15 +149,15 @@ async function verifyBrowserShell({ frontendUrl }) {
         {
           label: "autonomy-heading",
           strategies: [
-            { type: "role", role: "heading", options: { name: "Autonomy Control Plane" } },
             { type: "text", text: "Autonomy Control Plane", options: { exact: true } },
+            { type: "role", role: "heading", options: { name: "Autonomy Control Plane" } },
           ],
         },
         {
           label: "boundary-state",
           strategies: [
-            { type: "role", role: "heading", options: { name: "Boundary State", exact: true } },
             { type: "text", text: "Boundary State", options: { exact: true } },
+            { type: "role", role: "heading", options: { name: "Boundary State", exact: true } },
           ],
         },
         {
