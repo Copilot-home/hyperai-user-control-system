@@ -47,7 +47,8 @@ async function packageLockIntegrityEvidence() {
     const packageJson = JSON.parse(packageJsonText);
     const lock = JSON.parse(lockText);
     const expected = { ...(packageJson.dependencies || {}), ...(packageJson.devDependencies || {}) };
-    const locked = lock.packages?.['']?.dependencies || {};
+    const lockRoot = lock.packages?.[''] || {};
+    const locked = { ...(lockRoot.dependencies || {}), ...(lockRoot.devDependencies || {}) };
     const mismatches = [];
     for (const [name, range] of Object.entries(expected)) {
       if (locked[name] !== range) mismatches.push({ name, package_json: range, package_lock: locked[name] ?? null });
