@@ -70,7 +70,10 @@ export function createPostgresRepository(pool) {
         sequence: Number(event.sequence),
         created_at: new Date(event.created_at).toISOString(),
       }));
-      return {events: normalizedEvents,projection:projection.rows[0] || null};
+      const normalizedProjection = projection.rows[0]
+        ? { ...projection.rows[0], state_version: Number(projection.rows[0].state_version) }
+        : null;
+      return {events: normalizedEvents,projection:normalizedProjection};
     },
   });
 }
