@@ -61,6 +61,11 @@ jobs:
 
       - name: Build production artifact
         run: npm run ci:build
+      - name: Capture resolved dependency lockfile
+        uses: actions/upload-artifact@v4
+        with:
+          name: resolved-package-lock
+          path: package-lock.json
 
   browser-agent-smoke:
     runs-on: ubuntu-latest
