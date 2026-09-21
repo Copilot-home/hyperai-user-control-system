@@ -22,7 +22,7 @@ export function createEvent(input = {}) {
   const event=createProtocolObject('Event',input);
   if (!event.event_type) throw new Error('EVENT_TYPE_MISSING');
   if (!event.aggregate_id) throw new Error('EVENT_AGGREGATE_ID_MISSING');
-  const unsigned={...event,sequence:input.sequence ?? 0,previous_hash:input.previous_hash || null};
+  const unsigned={...event,payload:event.payload ?? {},sequence:input.sequence ?? 0,previous_hash:input.previous_hash || null};
   const event_hash=hashEvent(unsigned);
   return Object.freeze({...unsigned,event_hash});
 }
