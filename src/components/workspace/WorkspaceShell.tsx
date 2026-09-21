@@ -129,7 +129,7 @@ const WorkspaceShell: React.FC<WorkspaceShellProps> = ({ initialTab = 'overview'
     };
 
     const promoteCurrentTask = async () => {
-        const intent = routing?.mission_id || session?.session.current_mission_id || 'reasoning_request';
+        const intent = routing?.mission_id || session?.session?.current_mission_id || 'reasoning_request';
         await createWorkspaceMission({
             title: routing?.reply || draft || 'Workspace mission',
             intent,
@@ -141,7 +141,7 @@ const WorkspaceShell: React.FC<WorkspaceShellProps> = ({ initialTab = 'overview'
     };
 
     const currentMission = useMemo(
-        () => missions.find((mission) => mission.mission_id === (routing?.mission_id || session?.session.current_mission_id)),
+        () => missions.find((mission) => mission.mission_id === (routing?.mission_id || session?.session?.current_mission_id)),
         [missions, routing, session],
     );
 
@@ -242,9 +242,9 @@ const WorkspaceShell: React.FC<WorkspaceShellProps> = ({ initialTab = 'overview'
                             Chat la trung tam. HyperAI tu chon conversation, compare, mission, provider, hoac operator mode theo task.
                         </p>
                         <div className={styles.metaRow}>
-                            <span>Boundary: {session?.shell.boundary_state || 'unknown'}</span>
-                            <span>Action: {session?.shell.selected_action || 'hold'}</span>
-                            <span>Mode: {routing?.mode || session?.session.mode || 'conversation_mode'}</span>
+                            <span>Boundary: {session?.shell?.boundary_state || 'unknown'}</span>
+                            <span>Action: {session?.shell?.selected_action || 'hold'}</span>
+                            <span>Mode: {routing?.mode || session?.session?.mode || 'conversation_mode'}</span>
                             <span>OODA: {session?.orchestration?.mode || 'preservation_only'}</span>
                             <span>Agent chain: {session?.orchestration?.agent_chain_status || 'not_requested'}</span>
                             <span>Law: {session?.creator_law?.status || 'unknown'}</span>
@@ -280,9 +280,9 @@ const WorkspaceShell: React.FC<WorkspaceShellProps> = ({ initialTab = 'overview'
                     <div className={styles.responseCard}>
                         <div className={styles.responseHeader}>
                             <h2>Conversation Core</h2>
-                            <span>{routing?.synthesis.strategy || 'waiting_for_route'}</span>
+                            <span>{routing?.synthesis?.strategy || 'waiting_for_route'}</span>
                         </div>
-                        <p className={styles.responseText}>{routing?.reply || session?.session.last_route_summary || 'Chua co route moi. Dung companion rail de goi lane hoac bat dau bang chat.'}</p>
+                        <p className={styles.responseText}>{routing?.reply || session?.session?.last_route_summary || 'Chua co route moi. Dung companion rail de goi lane hoac bat dau bang chat.'}</p>
                         <div className={styles.participantGrid}>
                             {visibleParticipants.map((node) => (
                                 <div key={node.node_id} className={styles.participantCard}>
@@ -487,8 +487,8 @@ const WorkspaceShell: React.FC<WorkspaceShellProps> = ({ initialTab = 'overview'
                 <aside className={styles.companionRail}>
                     <div className={styles.railSection}>
                         <h2>Companion Rail</h2>
-                        <p>{String(session?.companion.preferred_approval_surface?.process_name || 'No preferred approval surface detected.')}</p>
-                        <p className={styles.smallText}>Active creator surfaces: {session?.companion.active_creator_surfaces.length || 0}</p>
+                        <p>{String(session?.companion?.preferred_approval_surface?.process_name || 'No preferred approval surface detected.')}</p>
+                        <p className={styles.smallText}>Active creator surfaces: {session?.companion?.active_creator_surfaces.length || 0}</p>
                     </div>
                     <div className={styles.railSection}>
                         <h3>AI lanes</h3>
