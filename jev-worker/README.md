@@ -11,8 +11,20 @@ The worker wraps the real browser-use/jev-ultrafast Agent. Upstream Jev uses a d
 - state_authority: `false`
 - commit_authority: `false`
 - protocol: `JEV-WORKER-ATTESTATION-1.0`
+- execution: `POST /v1/run`
+- attestation: `GET /healthz`
 
-The worker must expose `/healthz` with that attestation and a bounded execution endpoint implemented by the Jev Agent. Execution errors are not automatically retried. Unknown mutation state is reconciled by E-D NARSG rather than guessed.
+The worker exposes only the browser-execution boundary. E-D NARSG owns authorization, evidence, verification, state and commit. Execution errors and timeout are not automatically retried. Unknown mutation state is reconciled by E-D NARSG rather than guessed.
+
+## Production boundary
+
+- Set `JEV_WORKER_TOKEN` whenever the worker binds to a non-local host. Startup fails closed if it is missing.
+- Put the worker behind a TLS-capable reverse proxy; the stdlib HTTP server is the bounded local worker boundary, not the public TLS edge.
+- `JEV_WORKER_MAX_RUN_SECONDS` defaults to 120 seconds.
+- `JEV_WORKER_MAX_CONCURRENT_RUNS` defaults to 1 to avoid uncontrolled browser fan-out.
+- `/healthz` returns only non-secret worker attestation.
+- `/v1/run` requires a bounded JSON request and returns only terminal Jev state (`done` or `blocked`).
+- A `done` response is execution evidence, not independent business verification.
 
 ## Upstream
 
