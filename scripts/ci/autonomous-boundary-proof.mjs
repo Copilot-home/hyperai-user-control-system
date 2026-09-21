@@ -237,9 +237,12 @@ async function main() {
     frontendUrl,
   });
 
+  // /api/runtime/capabilities is the runtime policy materialization boundary.
+  // Probe it before reading the persisted manifest so the proof checks the same
+  // authority artifact that the live control plane exposes.
+  await fetchJson(`${backendUrl}/api/runtime/capabilities`);
   const policyManifest = readPolicyManifest();
-  assert(policyManifest, "Policy manifest did not materialize after runtime bootstrap.");
-  const policyBoundary = policyManifest.boundary_state ?? policyManifest.haios_state;
+  assert(policyManifest, "Policy manifest did not materialize after runtime bootstrap.");  const policyBoundary = policyManifest.boundary_state ?? policyManifest.haios_state;
   assert(policyBoundary === "autonomous", `Manifest policy reports boundary ${policyBoundary}.`);
   assert(
     policyManifest.selected_action === manifest.selected_action,
