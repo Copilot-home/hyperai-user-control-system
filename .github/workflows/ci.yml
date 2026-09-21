@@ -139,6 +139,7 @@ jobs:
         env:
           SMOKE_TIMEOUT_MS: "90000"
           AUTONOMY_RECOVERY_WAIT_MS: "22000"
+          HYPERAI_BUILD_API_BASE_URL: "http://127.0.0.1:5000/api"
         run: npm run ci:autonomous-boundary-proof
 
   legacy-test-audit:
