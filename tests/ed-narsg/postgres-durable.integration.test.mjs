@@ -51,6 +51,35 @@ test('real transaction rolls back event on downstream failure', async () => {
   assert.equal((await repository.loadAggregate(aggregateId)).events.length, 0);
 });
 
+test('real database rejects projection bound to another aggregate', async () => {
+  const aggregateA = prefix + '-projection-a';
+  const aggregateB = prefix + '-projection-b';
+  const event = createEvent({
+    id: prefix + '-projection-event',
+    correlation_id: prefix,
+    aggregate_id: aggregateA,
+    event_type: 'PROJECTION_BOUNDARY',
+  });
+  await store.appendEvent(event);
+  await assert.rejects(
+    () => store.appendEvent(
+      createEvent({
+        id: prefix + '-projection-b-event',
+        correlation_id: prefix,
+        aggregate_id: aggregateB,
+        event_type: 'PROJECTION_BOUNDARY',
+      }),
+      {
+        aggregate_id: aggregateB,
+        state_version: 1,
+        state: { status: 'INVALID' },
+        last_event_id: event.id,
+      },
+    ),
+    /PROJECTION_AGGREGATE_MISMATCH/,
+  );
+});
+
 test('real uniqueness rejects duplicate aggregate sequence', async () => {
   const aggregateId = prefix + '-duplicate';
   const first = createEvent({ id: prefix + '-duplicate-1', correlation_id: prefix, aggregate_id: aggregateId, event_type: 'DUPLICATE' });
