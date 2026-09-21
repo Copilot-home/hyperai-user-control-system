@@ -183,6 +183,9 @@ jobs:
           node --version
           npm --version
 
+      - name: Install dependencies
+        run: npm install --no-audit --no-fund
+
       - name: Run E-D NARSG contract tests
         run: npm run test:ed-narsg
 
