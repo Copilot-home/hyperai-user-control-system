@@ -25,7 +25,8 @@
     "load-test": "k6 run load-test/k6-script.js",
     "format": "prettier --write .",
     "test:ed-narsg": "node --test tests/ed-narsg/*.test.mjs",
-    "ci:jev-worker-attestation": "node scripts/ci/jev-worker-attestation.mjs"
+    "ci:jev-worker-attestation": "node scripts/ci/jev-worker-attestation.mjs",
+    "ci:production-evidence-gate": "node scripts/ci/production-evidence-gate.mjs"
   },
   "dependencies": {
     "axios": "^0.21.1",
