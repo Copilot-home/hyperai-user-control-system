@@ -164,3 +164,6 @@ await writeFile(
 );
 
 console.log(JSON.stringify(report, null, 2));
+if (!classification.verified) {
+  process.exitCode = 1;
+}
