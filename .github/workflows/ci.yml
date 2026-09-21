@@ -185,3 +185,39 @@ jobs:
 
       - name: Run E-D NARSG contract tests
         run: npm run test:ed-narsg
+
+  production-evidence-gate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    needs: build-artifact
+    steps:
+      - name: Checkout
+        run: |
+          git clone "https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}.git" .
+          git fetch --no-tags origin "${{ github.ref }}"
+          git checkout --detach FETCH_HEAD
+
+      - name: Set up Node.js
+        run: |
+          curl -fsSL https://deb.nodesource.com/setup_20.x | sudo bash -
+          sudo apt-get install -y nodejs
+          node --version
+          npm --version
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Generate production evidence classification
+        env:
+          HYPERAI_UPSTREAM_URL: ${{ secrets.HYPERAI_UPSTREAM_URL }}
+          JEV_WORKER_URL: ${{ secrets.JEV_WORKER_URL }}
+          HYPERAI_CREDENTIAL_ROTATION_VERIFIED: ${{ secrets.HYPERAI_CREDENTIAL_ROTATION_VERIFIED }}
+        run: node scripts/ci/production-evidence-gate.mjs
+
+      - name: Upload production evidence artifact
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: production-evidence-gate
+          path: artifacts/production-evidence-gate.json
+          if-no-files-found: error
