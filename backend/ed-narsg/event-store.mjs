@@ -1,0 +1,54 @@
+import { createHash } from 'node:crypto';
+import { createProtocolObject } from './protocol.mjs';
+
+function canonical(value) {
+  return JSON.stringify(value, Object.keys(value).sort());
+}
+
+export function createEvent(input = {}) {
+  const event = createProtocolObject('Event', input);
+  if (!event.event_type) throw new Error('EVENT_TYPE_MISSING');
+  if (!event.aggregate_id) throw new Error('EVENT_AGGREGATE_ID_MISSING');
+
+  const unsigned = {
+    ...event,
+    sequence: input.sequence ?? 0,
+    previous_hash: input.previous_hash || null,
+  };
+  const event_hash = createHash('sha256').update(canonical(unsigned)).digest('hex');
+
+  return Object.freeze({ ...unsigned, event_hash });
+}
+
+export function appendEvent(events = [], input = {}) {
+  if (!Array.isArray(events)) throw new Error('EVENT_LOG_INVALID');
+  const previous = events.at(-1) || null;
+  const event = createEvent({
+    ...input,
+    sequence: previous ? previous.sequence + 1 : 0,
+    previous_hash: previous?.event_hash || null,
+  });
+  return Object.freeze([...events, event]);
+}
+
+export function verifyEventChain(events = []) {
+  if (!Array.isArray(events)) throw new Error('EVENT_LOG_INVALID');
+  let previousHash = null;
+  for (let i = 0; i < events.length; i += 1) {
+    const event = events[i];
+    if (event.sequence !== i) throw new Error('EVENT_SEQUENCE_INVALID');
+    if (event.previous_hash !== previousHash) throw new Error('EVENT_CHAIN_BROKEN');
+    const unsigned = { ...event };
+    delete unsigned.event_hash;
+    const expected = createHash('sha256').update(canonical(unsigned)).digest('hex');
+    if (expected !== event.event_hash) throw new Error('EVENT_HASH_INVALID');
+    previousHash = event.event_hash;
+  }
+  return true;
+}
+
+export function replayEvents(events = [], reducer, initialState) {
+  verifyEventChain(events);
+  if (typeof reducer !== 'function') throw new Error('REPLAY_REDUCER_REQUIRED');
+  return events.reduce((state, event) => reducer(state, event), initialState);
+}
