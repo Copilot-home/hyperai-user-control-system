@@ -417,6 +417,33 @@ async function verifyBrowser() {
   );
   const browser = await chromium.launch({ headless: true });
   const page = await browser.newPage({ viewport: { width: 1440, height: 900 } });
+  const browserDiagnostics = {
+    console: [],
+    page_errors: [],
+    request_failed: [],
+  };
+  page.on("console", (message) => {
+    if (browserDiagnostics.console.length < 50) {
+      browserDiagnostics.console.push({
+        type: message.type(),
+        text: message.text().slice(0, 1000),
+      });
+    }
+  });
+  page.on("pageerror", (error) => {
+    if (browserDiagnostics.page_errors.length < 20) {
+      browserDiagnostics.page_errors.push(error instanceof Error ? error.stack || error.message : String(error));
+    }
+  });
+  page.on("requestfailed", (request) => {
+    if (browserDiagnostics.request_failed.length < 50) {
+      browserDiagnostics.request_failed.push({
+        url: request.url(),
+        method: request.method(),
+        failure: request.failure()?.errorText || "unknown",
+      });
+    }
+  });
 
   try {
     const autoSyncHome = await verificationSync.verifyPageContract({
@@ -447,7 +474,35 @@ async function verifyBrowser() {
 
     await page.goto(FRONTEND_URL, { waitUntil: "domcontentloaded", timeout: TIMEOUT_MS });
     await page.waitForLoadState("domcontentloaded");
-    await page.locator("body").waitFor({ state: "visible", timeout: TIMEOUT_MS });
+    try {
+      await page.locator("body").waitFor({ state: "visible", timeout: Math.min(TIMEOUT_MS, 10000) });
+    } catch (error) {
+      const diagnosticsDir = path.join(runtimeDir, "verification");
+      try {
+        const html = await page.content();
+        const bodyText = await page.locator("body").innerText().catch(() => "");
+        const screenshotPath = path.join(diagnosticsDir, "browser-smoke-failure.png");
+        const htmlPath = path.join(diagnosticsDir, "browser-smoke-failure.html");
+        const diagnosticsPath = path.join(diagnosticsDir, "browser-smoke-diagnostics.json");
+        await page.screenshot({ path: screenshotPath, fullPage: true });
+        writeFileSync(htmlPath, html, "utf8");
+        writeFileSync(
+          diagnosticsPath,
+          JSON.stringify({
+            at: new Date().toISOString(),
+            frontend_url: FRONTEND_URL,
+            final_url: page.url(),
+            body_text_excerpt: bodyText.slice(0, 2000),
+            diagnostics: browserDiagnostics,
+            error: error instanceof Error ? error.stack || error.message : String(error),
+          }, null, 2) + "\\n",
+          "utf8"
+        );
+      } catch (diagnosticError) {
+        console.warn("Unable to persist browser diagnostics:", diagnosticError);
+      }
+      throw error;
+    }
 
     const bodyText = await page.locator("body").innerText();
     const requiredMarkers = ["HyperAI Unified Workspace", "Conversation Core", "Companion Rail"];
