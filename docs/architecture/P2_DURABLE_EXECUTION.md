@@ -45,7 +45,7 @@ The current repository boundary intentionally has no database driver dependency 
 
 ## Gate
 
-P2 acceptance is proven on the current repair head by HyperAI CI run #133:
+P2 acceptance requires a completed HyperAI CI run that executes the real PostgreSQL durability lane against the repository head. The lane must prove:
 
 1. append survives a pool/process boundary;
 2. duplicate aggregate sequence is rejected;
@@ -55,11 +55,4 @@ P2 acceptance is proven on the current repair head by HyperAI CI run #133:
 6. the E-D NARSG contract suite preserves UNKNOWN mutation semantics;
 7. the durable adapter rejects tampered event hashes and broken predecessor links before commit.
 
-P2 STATUS: VERIFIED
-
-Evidence:
-- HyperAI CI run #133 — all jobs completed successfully;
-- real PostgreSQL durability lane passed;
-- E-D NARSG contract lane passed;
-- browser/autonomous boundary lanes passed;
-- build, Docker surface and legacy audit passed.
+P2 is not accepted from static code inspection alone. Until the PostgreSQL lane completes successfully on the current head, status is `BLOCKED_WITH_EXACT_CAUSE: DURABLE_POSTGRES_CI_NOT_YET_VERIFIED`.
