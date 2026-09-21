@@ -61,6 +61,7 @@ test('preserves unresolved dependency security as a blocker', () => {
     jev_worker: { verified: true },
     credential_hygiene: { verified: true },
     dependency_security: { verified: false, reason: 'DEPENDENCY_SECURITY_UNRESOLVED' },
+    package_lock_integrity: { verified: true },
   });
   assert.equal(result.status, 'BLOCKED');
   assert.deepEqual(result.blockers, ['DEPENDENCY_SECURITY_UNRESOLVED']);
