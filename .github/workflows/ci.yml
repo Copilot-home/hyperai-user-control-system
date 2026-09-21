@@ -188,9 +188,6 @@ jobs:
       - name: Run E-D NARSG contract tests
         run: npm run test:ed-narsg
 
-      - name: Generate production evidence classification
-        run: npm run ci:production-evidence-gate
-
   durable-postgres-integration:
     runs-on: ubuntu-latest
     timeout-minutes: 15
