@@ -598,7 +598,7 @@ const WorkspaceShell: React.FC<WorkspaceShellProps> = ({ initialTab = 'overview'
                                     <p>status: {node.status}</p>
                                      <p>maturity: {node.current_maturity || 'unmapped'}</p>
                                      <p>connector: {node.connector_binding || 'unbound'}</p>
-                                    <p>roles: {node.allowed_mission_roles.join(', ') || 'none'}</p>
+                                    <p>roles: {(node.allowed_mission_roles || []).join(', ') || 'none'}</p>
                                     <p>proof: {node.proof_state?.fresh ? 'fresh' : 'stale'}</p>
                                 </div>
                             ))}
