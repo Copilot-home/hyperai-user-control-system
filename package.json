@@ -29,7 +29,7 @@
     "ci:production-evidence-gate": "node scripts/ci/production-evidence-gate.mjs"
   },
   "dependencies": {
-    "axios": "^0.21.1",
+    "axios": "^1.20.0",
     "chart.js": "^4.5.1",
     "classnames": "^2.3.1",
     "cors": "^2.8.6",
@@ -41,7 +41,7 @@
     "react-speech-recognition": "^4.0.1",
     "socket.io": "^4.8.3",
     "socket.io-client": "^4.0.0",
-    "vite": "^2.6.4",
+    "vite": "^6.4.3",
     "ws": "^8.20.0",
     "pg": "^8.23.0"
   },
@@ -52,7 +52,7 @@
     "@types/supertest": "^7.2.0",
     "@typescript-eslint/eslint-plugin": "^5.62.0",
     "@typescript-eslint/parser": "^5.62.0",
-    "@vitejs/plugin-react": "^1.3.2",
+    "@vitejs/plugin-react": "^5.2.0",
     "eslint": "^7.32.0",
     "eslint-plugin-react": "^7.37.5",
     "eslint-plugin-react-hooks": "^4.6.2",
