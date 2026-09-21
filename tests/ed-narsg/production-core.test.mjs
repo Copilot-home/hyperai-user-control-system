@@ -25,6 +25,8 @@ test('authority matrix prevents executor and verifier from committing', () => {
   assert.equal(can('EXECUTOR', 'EXECUTE'), true);
   assert.equal(can('EXECUTOR', 'COMMIT'), false);
   assert.equal(can('VERIFIER', 'VERIFY'), true);
+  assert.equal(can('POLICY_ENGINE', 'AUTHORIZE'), true);
+  assert.equal(can('POLICY_ENGINE', 'COMMIT'), false);
   assert.equal(can('VERIFIER', 'COMMIT'), false);
   assert.throws(() => assertCan('EXECUTOR', 'COMMIT'), /AUTHORITY_DENIED/);
 });
