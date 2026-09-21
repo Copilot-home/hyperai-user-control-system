@@ -45,13 +45,15 @@ The current repository boundary intentionally has no database driver dependency 
 
 ## Gate
 
-P2 is VERIFIED only after a real database test demonstrates:
+P2 acceptance has now been exercised by the repository's real PostgreSQL integration lane in GitHub Actions. The verified run demonstrates:
 
-1. append survives process restart;
-2. duplicate event sequence is rejected;
-3. event + projection atomicity holds;
-4. idempotency claim survives worker restart;
-5. replay reconstructs state;
-6. an UNKNOWN mutation cannot be retried blindly.
+1. append survives a pool/process boundary;
+2. duplicate aggregate sequence is rejected;
+3. event + projection writes are transaction-bound;
+4. idempotency claims survive repository recreation;
+5. replay reconstructs state from the hash-chained event stream;
+6. the E-D NARSG contract suite continues to preserve UNKNOWN mutation semantics.
 
-Until then: BLOCKED_WITH_EXACT_CAUSE: DURABLE_DATABASE_NOT_VERIFIED.
+P2 STATUS: VERIFIED
+
+Evidence: HyperAI CI durable PostgreSQL integration + E-D NARSG contract + browser/autonomous boundary jobs all completed successfully on the verified head.
