@@ -178,6 +178,16 @@ async function verifyBrowserShell({ frontendUrl }) {
     await page.getByText("Boundary State", { exact: true }).waitFor({ timeout: timeoutMs });
     await page.getByText("Autonomous Policy Authority", { exact: true }).waitFor({ timeout: timeoutMs });
 
+    await page.waitForFunction(() => {
+      try {
+        const raw = window.localStorage.getItem("hyperai_autonomy_boundary_snapshot");
+        const state = raw ? JSON.parse(raw) : null;
+        return state?.state === "autonomous";
+      } catch {
+        return false;
+      }
+    }, null, { timeout: Math.min(timeoutMs, 15000) });
+
     const shellState = await page.evaluate(() => {
       const raw = window.localStorage.getItem("hyperai_autonomy_boundary_snapshot");
       return raw ? JSON.parse(raw) : null;
@@ -185,7 +195,6 @@ async function verifyBrowserShell({ frontendUrl }) {
 
     assert(shellState, "Browser shell did not persist an autonomy boundary snapshot.");
     assert(shellState.state === "autonomous", `Browser shell boundary snapshot drifted to ${shellState.state}.`);
-
     return {
       shellBoundaryState: shellState.state,
       shellRecoveryAction: shellState.recoveryAction ?? null,
