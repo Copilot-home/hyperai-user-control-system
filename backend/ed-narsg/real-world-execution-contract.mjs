@@ -22,6 +22,12 @@ function requireObject(value, reason) {
   }
 }
 
+function assertContractIsMutable(contract) {
+  if (contract.status === 'COMMITTED' || contract.status === 'BLOCKED' || contract.status === 'UNKNOWN') {
+    throw new Error('EXECUTION_CONTRACT_TERMINAL');
+  }
+}
+
 export function createExecutionContract(input = {}) {
   requireObject(input, 'EXECUTION_CONTRACT_INPUT_INVALID');
 
@@ -59,6 +65,7 @@ export function createExecutionContract(input = {}) {
 export function advanceExecutionContract(contract, event = {}) {
   requireObject(contract, 'EXECUTION_CONTRACT_INVALID');
   requireObject(event, 'EXECUTION_EVENT_INVALID');
+  assertContractIsMutable(contract);
 
   const phase = contract.phase;
   const next = event.next_phase;
@@ -102,6 +109,7 @@ export function commitVerifiedExecution(contract, verification = {}) {
   requireObject(contract, 'EXECUTION_CONTRACT_INVALID');
   requireObject(verification, 'EXECUTION_VERIFICATION_INVALID');
 
+  assertContractIsMutable(contract);
   if (contract.phase !== 'VERIFICATION') throw new Error('EXECUTION_NOT_READY_TO_COMMIT');
   if (contract.mutation_state === 'UNKNOWN') throw new Error('EXECUTION_UNKNOWN_STATE_CANNOT_COMMIT');
   if (verification.verified !== true) throw new Error('EXECUTION_INDEPENDENT_VERIFICATION_REQUIRED');
