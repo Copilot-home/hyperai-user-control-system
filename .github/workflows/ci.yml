@@ -61,11 +61,33 @@ jobs:
 
       - name: Build production artifact
         run: npm run ci:build
-      - name: Capture resolved dependency lockfile
-        uses: actions/upload-artifact@v4
+  reconcile-package-lock:
+    runs-on: ubuntu-latest
+    if: github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository && github.event.pull_request.head.ref == 'audit/2026-09-21-runtime-proxy-repair' && github.actor == 'NguyenCuong1989'
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout branch
+        uses: actions/checkout@v4
         with:
-          name: resolved-package-lock
-          path: package-lock.json
+          ref: audit/2026-09-21-runtime-proxy-repair
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - name: Reconcile dependency lockfile
+        run: npm install --package-lock-only --ignore-scripts --no-audit --no-fund
+      - name: Commit reconciled lockfile
+        run: |
+          if git diff --quiet -- package-lock.json; then
+            echo "package-lock.json already reconciled"
+            exit 0
+          fi
+          git config user.name "NguyenCuong1989"
+          git config user.email "nguyencuong.2509@icloud.com"
+          git add package-lock.json
+          git commit -m "chore(deps): reconcile package lockfile"
+          git push origin HEAD:audit/2026-09-21-runtime-proxy-repair
 
   browser-agent-smoke:
     runs-on: ubuntu-latest
