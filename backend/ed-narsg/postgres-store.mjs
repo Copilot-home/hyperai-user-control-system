@@ -47,8 +47,12 @@ export function createPostgresRepository(pool) {
           },
           async upsertProjection(projection) {
             if (!projection.aggregate_id || !projection.last_event_id) throw new Error('PROJECTION_IDENTITY_INVALID');
-            if (projection.aggregate_id !== currentEventAggregateId) throw new Error('PROJECTION_AGGREGATE_MISMATCH');
-            if (projection.last_event_id !== currentEventId) throw new Error('PROJECTION_EVENT_MISMATCH');
+            const owner = await client.query(
+              'SELECT aggregate_id FROM ' + DURABLE_TABLES.events + ' WHERE event_id=$1',
+              [projection.last_event_id],
+            );
+            if (!owner.rows[0]) throw new Error('PROJECTION_EVENT_NOT_FOUND');
+            if (owner.rows[0].aggregate_id !== projection.aggregate_id) throw new Error('PROJECTION_AGGREGATE_MISMATCH');
             await client.query(
               'INSERT INTO ' + DURABLE_TABLES.projections + ' (aggregate_id, state_version, state, last_event_id, updated_at) VALUES ($1,$2,$3::jsonb,$4,$5) ON CONFLICT (aggregate_id) DO UPDATE SET state_version=EXCLUDED.state_version,state=EXCLUDED.state,last_event_id=EXCLUDED.last_event_id,updated_at=EXCLUDED.updated_at',
               [projection.aggregate_id,projection.state_version ?? 0,json(projection.state),projection.last_event_id,projection.updated_at || new Date().toISOString()],
@@ -65,14 +69,6 @@ export function createPostgresRepository(pool) {
             );
             return { claimed:false, record:existing.rows[0] || null };
           },
-        };
-        let currentEventAggregateId = null;
-        let currentEventId = null;
-        const originalInsertEvent = tx.insertEvent;
-        tx.insertEvent = async (event) => {
-          currentEventAggregateId = event.aggregate_id;
-          currentEventId = event.id;
-          return originalInsertEvent(event);
         };
         const result=await work(tx);
         await client.query('COMMIT');
