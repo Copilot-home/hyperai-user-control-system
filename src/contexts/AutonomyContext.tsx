@@ -110,8 +110,12 @@ const buildBoundarySnapshot = (
     const policyConfirmsAutonomous =
         policyBoundaryState === 'autonomous' &&
         ['reuse_default_runtime', 'reuse_managed_runtime', 'hold_current_runtime'].includes(policyAction ?? '');
+    const runtimeConfirmsAutonomous =
+        capabilities?.boundary_state === 'autonomous' ||
+        capabilities?.backend_classification === 'autonomous-core-ready' ||
+        capabilities?.selected_action === 'reuse_default_runtime';
     const derivedRecoveryAction = deriveRecoveryAction(capabilities);
-    const boundaryState = policyConfirmsAutonomous
+    const boundaryState = policyConfirmsAutonomous || runtimeConfirmsAutonomous
         ? 'autonomous'
         : capabilities?.boundary_state ?? (status?.active ? 'operational' : 'recoverable');
     const recoveryAction =
