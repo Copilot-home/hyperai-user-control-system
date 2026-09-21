@@ -17,6 +17,30 @@ permissions:
   contents: read
 
 jobs:
+  lockfile-repair:
+    if: github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: write
+    steps:
+      - name: Repair package lock
+        run: |
+          git clone "https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}.git" .
+          git fetch --no-tags origin "${{ github.event.pull_request.head.ref }}"
+          git checkout --detach FETCH_HEAD
+          npm install --package-lock-only --ignore-scripts --no-audit --no-fund
+          npm audit fix --package-lock-only --omit=dev --no-fund || true
+          if git diff --quiet -- package-lock.json; then
+            echo "package-lock.json already synchronized"
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add package-lock.json
+          git commit -m "chore(deps): regenerate and remediate package lock"
+          git push origin HEAD:${{ github.event.pull_request.head.ref }}
+
   docker-surface-audit:
     runs-on: ubuntu-latest
     timeout-minutes: 10
