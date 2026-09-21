@@ -24,7 +24,7 @@ const MATRIX = Object.freeze({
   EXECUTOR: Object.freeze({ READ: true, PROPOSE: false, EXECUTE: true, VERIFY: false, COMMIT: false, AUTHORIZE: false }),
   VERIFIER: Object.freeze({ READ: true, PROPOSE: false, EXECUTE: false, VERIFY: true, COMMIT: false, AUTHORIZE: false }),
   STATE_AUTHORITY: Object.freeze({ READ: true, PROPOSE: false, EXECUTE: false, VERIFY: false, COMMIT: true, AUTHORIZE: false }),
-  POLICY_ENGINE: Object.freeze({ READ: true, PROPOSE: true, EXECUTE: true, VERIFY: true, COMMIT: true, AUTHORIZE: true }),
+  POLICY_ENGINE: Object.freeze({ READ: true, PROPOSE: true, EXECUTE: true, VERIFY: true, COMMIT: false, AUTHORIZE: true }),
 });
 
 export function can(actor, operation) {
