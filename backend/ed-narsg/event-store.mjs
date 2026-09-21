@@ -19,7 +19,8 @@ export function createEvent(input = {}) {
 export function appendEvent(events=[],input={}) {
   if (!Array.isArray(events)) throw new Error('EVENT_LOG_INVALID');
   const previous=events.at(-1) || null;
-  const event=createEvent({...input,sequence:previous ? previous.sequence+1 : 0,previous_hash:previous?.event_hash || null});
+  const { event_hash: _ignoredEventHash, ...eventInput } = input;
+  const event=createEvent({...eventInput,sequence:previous ? previous.sequence+1 : 0,previous_hash:previous?.event_hash || null});
   return Object.freeze([...events,event]);
 }
 
