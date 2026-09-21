@@ -1,4 +1,5 @@
 export const PROTOCOL_VERSION = 'EDNARSG-1.0';
+export const ED_NARSG_PROTOCOL_VERSION = 'EDNARSG-PROTOCOL-1.0';
 
 export const JEV_OPERATIONS = new Set([
   'CLICK',
@@ -12,6 +13,28 @@ export const JEV_OPERATIONS = new Set([
 ]);
 
 export const MUTATING_OPERATIONS = new Set(['CLICK', 'TYPE_TEXT', 'SELECT']);
+
+const REQUIRED_TYPES = new Set([
+  'Goal',
+  'Intent',
+  'Scope',
+  'Object',
+  'Edge',
+  'Observation',
+  'Evidence',
+  'Claim',
+  'Task',
+  'Dependency',
+  'Resource',
+  'ExecutionContract',
+  'Action',
+  'Execution',
+  'Verification',
+  'State',
+  'Transition',
+  'Artifact',
+  'Event',
+]);
 
 export function assertExecutionContract(contract) {
   if (!contract || typeof contract !== 'object') throw new Error('execution contract is required');
@@ -41,4 +64,35 @@ export function createObservation({ observation_id, source, observed_at, payload
 export function createEvidence({ evidence_id, observation_id, claim, validity = 'VALID' }) {
   if (!evidence_id || !observation_id || !claim) throw new Error('evidence provenance is incomplete');
   return { schema: PROTOCOL_VERSION, evidence_id, observation_id, claim, validity };
+}
+
+export function isProtocolType(type) {
+  return REQUIRED_TYPES.has(type);
+}
+
+export function createProtocolObject(type, input = {}) {
+  if (!isProtocolType(type)) throw new Error('PROTOCOL_TYPE_INVALID');
+  if (!input || typeof input !== 'object' || Array.isArray(input)) {
+    throw new Error('PROTOCOL_INPUT_INVALID');
+  }
+  if (!input.correlation_id) throw new Error('PROTOCOL_CORRELATION_ID_MISSING');
+
+  const id = input.id || globalThis.crypto?.randomUUID?.() || `obj-${Date.now()}-${Math.random().toString(16).slice(2)}`;
+  const createdAt = input.created_at || new Date().toISOString();
+  const source = input.source || { system: 'ed-narsg' };
+
+  return Object.freeze({
+    id: String(id),
+    type,
+    schema_version: ED_NARSG_PROTOCOL_VERSION,
+    created_at: String(createdAt),
+    source: Object.freeze({ ...source }),
+    correlation_id: String(input.correlation_id),
+    causation_id: input.causation_id ? String(input.causation_id) : null,
+    ...Object.fromEntries(
+      Object.entries(input).filter(([key]) => ![
+        'id', 'type', 'schema_version', 'created_at', 'source', 'correlation_id', 'causation_id',
+      ].includes(key)),
+    ),
+  });
 }
