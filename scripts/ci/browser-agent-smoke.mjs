@@ -477,6 +477,26 @@ async function verifyBrowser() {
     try {
       await page.getByText("Conversation Core", { exact: true }).waitFor({ state: "visible", timeout: Math.min(TIMEOUT_MS, 10000) });
     } catch (error) {
+      const diagnosticSnapshot = await page.evaluate(() => ({
+        ready_state: document.readyState,
+        url: window.location.href,
+        root_present: Boolean(document.getElementById("root")),
+        root_child_count: document.getElementById("root")?.children.length ?? 0,
+        body_text_excerpt: document.body?.innerText?.slice(0, 2000) ?? "",
+        root_html_excerpt: document.getElementById("root")?.innerHTML?.slice(0, 4000) ?? "",
+      })).catch(() => ({ ready_state: "unknown", url: page.url(), root_present: false, root_child_count: 0, body_text_excerpt: "", root_html_excerpt: "" }));
+      console.error(
+        JSON.stringify(
+          {
+            browser_failure: "conversation-core-not-visible",
+            error: error instanceof Error ? error.stack || error.message : String(error),
+            snapshot: diagnosticSnapshot,
+            diagnostics: browserDiagnostics,
+          },
+          null,
+          2,
+        ),
+      );
       const diagnosticsDir = path.join(runtimeDir, "verification");
       try {
         const html = await page.content();
