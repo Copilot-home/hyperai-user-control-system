@@ -1,5 +1,6 @@
 import pg from 'pg';
 import { DURABLE_TABLES } from './durable-store.mjs';
+import { verifyEventHash } from './event-store.mjs';
 
 const { Pool } = pg;
 
@@ -26,8 +27,19 @@ export function createPostgresRepository(pool) {
       const client = await pool.connect();
       try {
         await client.query('BEGIN');
+        await client.query("SET TRANSACTION ISOLATION LEVEL READ COMMITTED");
         const tx = {
           async insertEvent(event) {
+            verifyEventHash(event);
+            const tail = await client.query(
+              'SELECT sequence, event_hash FROM ' + DURABLE_TABLES.events + ' WHERE aggregate_id=$1 ORDER BY sequence DESC LIMIT 1 FOR UPDATE',
+              [event.aggregate_id],
+            );
+            const previous = tail.rows[0] || null;
+            const expectedSequence = previous ? Number(previous.sequence) + 1 : 0;
+            const expectedPreviousHash = previous ? previous.event_hash : null;
+            if (event.sequence !== expectedSequence) throw new Error('EVENT_SEQUENCE_GAP');
+            if ((event.previous_hash ?? null) !== expectedPreviousHash) throw new Error('EVENT_PREVIOUS_HASH_MISMATCH');
             await client.query(
               'INSERT INTO ' + DURABLE_TABLES.events + ' (event_id, aggregate_id, sequence, event_type, schema_version, created_at, correlation_id, causation_id, source, payload, previous_hash, event_hash) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9::jsonb,$10::jsonb,$11,$12)',
               [event.id,event.aggregate_id,event.sequence,event.event_type,event.schema_version,event.created_at,event.correlation_id,event.causation_id,json(event.source),json(event.payload),event.previous_hash ?? null,event.event_hash],
