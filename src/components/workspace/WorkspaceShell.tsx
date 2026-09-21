@@ -78,11 +78,11 @@ const WorkspaceShell: React.FC<WorkspaceShellProps> = ({ initialTab = 'overview'
                 getWorkspaceProviders(),
             ]);
             setSession(nextSession);
-            setGraph(nextGraph.nodes);
-            setLanes(nextLanes.lanes);
-            setRuntimes(nextRuntimes);
-            setConnectors(nextConnectors);
-            setMissions(nextMissions.bindings);
+            setGraph(Array.isArray(nextGraph?.nodes) ? nextGraph.nodes : []);
+            setLanes(Array.isArray(nextLanes?.lanes) ? nextLanes.lanes : []);
+            setRuntimes(Array.isArray(nextRuntimes) ? nextRuntimes : []);
+            setConnectors(Array.isArray(nextConnectors) ? nextConnectors : []);
+            setMissions(Array.isArray(nextMissions?.bindings) ? nextMissions.bindings : []);
             setProof(nextProof);
             setProviders(nextProviders);
             setError(null);
@@ -501,7 +501,7 @@ const WorkspaceShell: React.FC<WorkspaceShellProps> = ({ initialTab = 'overview'
                     </div>
                     <div className={styles.railSection}>
                         <h3>Status + Proof</h3>
-                        {proof?.proof_timeline.map((item) => (
+                        {(proof?.proof_timeline || []).map((item) => (
                             <div key={item.id} className={styles.statusRow}>
                                 <strong>{item.label}</strong>
                                 <span>{item.status}</span>
@@ -610,7 +610,7 @@ const WorkspaceShell: React.FC<WorkspaceShellProps> = ({ initialTab = 'overview'
                     <div className={styles.tabPanel}>
                         <h2>Proof Rail</h2>
                         <div className={styles.listGrid}>
-                            {proof?.mission_roots.map((item) => (
+                            {(proof?.mission_roots || []).map((item) => (
                                 <div key={item.node_id} className={styles.listCard}>
                                     <h3>{item.node_id}</h3>
                                     <p>status: {item.status}</p>
@@ -656,7 +656,7 @@ const WorkspaceShell: React.FC<WorkspaceShellProps> = ({ initialTab = 'overview'
                     <div className={styles.tabPanel}>
                         <h2>Provider Surface</h2>
                         <div className={styles.listGrid}>
-                            {providers?.providers.map((provider) => (
+                            {(providers?.providers || []).map((provider) => (
                                 <div key={provider.node_id} className={styles.listCard}>
                                     <h3>{provider.label}</h3>
                                     <p>status: {provider.status}</p>
