@@ -39,7 +39,7 @@ REALITY
   -> EXECUTION
   -> REALITY
 
-The current adapter establishes the protocol boundary. Durable event storage, scheduler/resource locking, policy service, independent browser verifier, and a live Jev worker are separate production gates.
+The current adapter establishes the protocol boundary. A machine-readable Production Evidence Gate now classifies upstream reachability, Jev worker attestation, credential hygiene, and dependency security without granting deployment authority. Durable event storage, scheduler/resource locking, policy service, independent browser verifier, and a live Jev worker remain separate production gates.
 
 ## Jev integration mapping
 
