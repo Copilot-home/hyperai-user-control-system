@@ -10,6 +10,7 @@ import {
     tickAutonomy,
 } from '../services/api/autonomyAPI';
 import { hasRuntimeApiOriginOverride } from '../services/runtimeConfig';
+import { readAutonomyBoundarySnapshot } from '../services/storage/autonomyBoundaryMemory';
 import { getRuntimeCapabilities, reconcileRuntime } from '../services/api/runtimeAPI';
 import {
     AutonomyDecision,
@@ -115,9 +116,13 @@ const buildBoundarySnapshot = (
         capabilities?.backend_classification === 'autonomous-core-ready' ||
         capabilities?.selected_action === 'reuse_default_runtime';
     const derivedRecoveryAction = deriveRecoveryAction(capabilities);
+    const explicitBoundaryState = policy?.boundary_state ?? capabilities?.boundary_state ?? null;
+    const previousSnapshot = readAutonomyBoundarySnapshot();
     const boundaryState = policyConfirmsAutonomous || runtimeConfirmsAutonomous
         ? 'autonomous'
-        : capabilities?.boundary_state ?? (status?.active ? 'operational' : 'recoverable');
+        : explicitBoundaryState ??
+            previousSnapshot?.state ??
+            (status?.active ? 'operational' : 'recoverable');
     const recoveryAction =
         derivedRecoveryAction === 'none' && !status?.active && boundaryState === 'recoverable'
             ? 'start-runtime'
@@ -127,7 +132,11 @@ const buildBoundarySnapshot = (
         (policyConfirmsAutonomous ? policy?.action_reason || policy?.boundary_reason : null) ??
         capabilities?.boundary_reason ??
         capabilities?.authority_reason ??
-        status?.heartbeat?.detail ??
+        (explicitBoundaryState
+            ? status?.heartbeat?.detail
+            : previousSnapshot?.classificationReason
+                ? `Retained previous verified boundary while runtime authority is temporarily unavailable: ${previousSnapshot.classificationReason}`
+                : status?.heartbeat?.detail) ??
         'Autonomy boundary has not produced a classification yet.';
 
     return {
