@@ -547,7 +547,34 @@ async function verifyBrowser() {
     await page.getByText("System Graph", { exact: false }).waitFor({ state: "visible", timeout: TIMEOUT_MS });
 
     await page.goto(`${FRONTEND_URL}/symphony-control`, { waitUntil: "domcontentloaded", timeout: TIMEOUT_MS });
-    await page.getByText("Symphony Control Panel", { exact: false }).waitFor({ state: "visible", timeout: TIMEOUT_MS });
+    try {
+      await page.getByText("Symphony Control Panel", { exact: false }).waitFor({ state: "visible", timeout: TIMEOUT_MS });
+    } catch (error) {
+      const symphonySnapshot = await page.evaluate(() => ({
+        ready_state: document.readyState,
+        url: window.location.href,
+        root_present: Boolean(document.getElementById("root")),
+        root_child_count: document.getElementById("root")?.children.length ?? 0,
+        body_text_excerpt: document.body?.innerText?.slice(0, 2500) ?? "",
+        root_html_excerpt: document.getElementById("root")?.innerHTML?.slice(0, 5000) ?? "",
+      })).catch(() => ({
+        ready_state: "unknown",
+        url: page.url(),
+        root_present: false,
+        root_child_count: 0,
+        body_text_excerpt: "",
+        root_html_excerpt: "",
+      }));
+      console.error(JSON.stringify({
+        browser_failure: "symphony-control-marker-not-visible",
+        error: error instanceof Error ? error.stack || error.message : String(error),
+        snapshot: symphonySnapshot,
+        diagnostics: browserDiagnostics,
+      }, null, 2));
+      throw new Error(
+        `Symphony Control Panel not visible. snapshot=${JSON.stringify(symphonySnapshot)} page_errors=${JSON.stringify(browserDiagnostics.page_errors)} console=${JSON.stringify(browserDiagnostics.console.slice(-20))}`
+      );
+    }
 
     if (restoreSymphonyAfterBrowser) {
       await page.goto(FRONTEND_URL, { waitUntil: "domcontentloaded", timeout: TIMEOUT_MS });
