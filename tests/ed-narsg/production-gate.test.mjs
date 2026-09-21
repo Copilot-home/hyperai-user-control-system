@@ -8,6 +8,7 @@ test('classifies a fully verified production gate as VERIFIED', () => {
     jev_worker: { verified: true },
     credential_hygiene: { verified: true },
     dependency_security: { verified: true },
+    package_lock_integrity: { verified: true },
   });
   assert.equal(result.status, 'VERIFIED');
   assert.deepEqual(result.blockers, []);
@@ -19,6 +20,7 @@ test('blocks when runtime upstream is not verified', () => {
     jev_worker: { verified: true },
     credential_hygiene: { verified: true },
     dependency_security: { verified: true },
+    package_lock_integrity: { verified: true },
   });
   assert.equal(result.status, 'BLOCKED');
   assert.deepEqual(result.blockers, ['UPSTREAM_NOT_VERIFIED']);
@@ -34,6 +36,7 @@ test('requires remediation for historical credential exposure', () => {
       reason: 'CREDENTIAL_ROTATION_REQUIRED',
     },
     dependency_security: { verified: true },
+    package_lock_integrity: { verified: true },
   });
   assert.equal(result.status, 'BLOCKED');
   assert.equal(result.remediation_required, true);
@@ -46,6 +49,7 @@ test('blocks when Jev worker is not independently verified', () => {
     jev_worker: { verified: false, reason: 'JEV_WORKER_NOT_VERIFIED' },
     credential_hygiene: { verified: true },
     dependency_security: { verified: true },
+    package_lock_integrity: { verified: true },
   });
   assert.equal(result.status, 'BLOCKED');
   assert.deepEqual(result.blockers, ['JEV_WORKER_NOT_VERIFIED']);
@@ -68,6 +72,7 @@ test('blocks when package-lock integrity is unverified', () => {
     jev_worker: { verified: true },
     credential_hygiene: { verified: true },
     dependency_security: { verified: true },
+    package_lock_integrity: { verified: true },
     package_lock_integrity: { verified: false, reason: 'PACKAGE_LOCK_OUT_OF_SYNC' },
   });
   assert.equal(result.status, 'BLOCKED');
