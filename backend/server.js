@@ -2222,7 +2222,7 @@ const buildRuntimeCapabilities = async () => {
                 label: 'Autonomy Loop',
                 mode: active ? 'live' : 'degraded',
                 status: active ? 'Autonomy scheduler running' : 'Autonomy loop stopped',
-                evidence: autonomyStatus.heartbeat.detail,
+                evidence: autonomyStatus.heartbeat?.detail || 'heartbeat detail unavailable',
                 endpoint: '/api/autonomy/status',
             },
             {
