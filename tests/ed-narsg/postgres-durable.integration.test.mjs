@@ -20,6 +20,20 @@ const aggregate = prefix + '-aggregate';
 
 await migratePostgres(pool, migration);
 
+test('real PostgreSQL preserves an empty payload hash across restart', async () => {
+  const aggregateId = prefix + '-empty-payload';
+  const event = createEvent({
+    id: prefix + '-empty-payload-event',
+    correlation_id: prefix,
+    aggregate_id: aggregateId,
+    event_type: 'EMPTY_PAYLOAD',
+  });
+  await store.appendEvent(event);
+  const loaded = await repository.loadAggregate(aggregateId);
+  assert.deepEqual(loaded.events[0].payload, {});
+  assert.equal(verifyEventChain(loaded.events), true);
+});
+
 test('real PostgreSQL durable append replay and restart recovery', async () => {
   const first = createEvent({ id: prefix + '-e0', correlation_id: prefix, aggregate_id: aggregate, event_type: 'EXECUTION_CREATED', payload: { nested: { b: 2, a: 1 } } });
   let events = appendEvent([], first);
