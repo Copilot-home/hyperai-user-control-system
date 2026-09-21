@@ -114,7 +114,7 @@ const buildBoundarySnapshot = (
     const classificationReason =
         capabilities?.boundary_reason ??
         capabilities?.authority_reason ??
-        status?.heartbeat.detail ??
+        status?.heartbeat?.detail ??
         'Autonomy boundary has not produced a classification yet.';
 
     return {
