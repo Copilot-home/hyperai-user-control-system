@@ -1,9 +1,13 @@
 """Bounded HTTP adapter for the real browser-use/jev-ultrafast Agent.
 
 The worker owns browser execution only. It never owns E-D NARSG state or commit authority.
+Deploy behind a TLS-capable reverse proxy; Python's stdlib HTTP server is intentionally only
+the local worker boundary.
 """
 import json
 import os
+import threading
+import time
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from urllib.parse import urlparse
 
@@ -14,6 +18,17 @@ HOST = os.environ.get("JEV_WORKER_HOST", "127.0.0.1")
 PORT = int(os.environ.get("JEV_WORKER_PORT", "8787"))
 TOKEN = os.environ.get("JEV_WORKER_TOKEN", "")
 HEALTH_ONLY = os.environ.get("JEV_WORKER_HEALTH_ONLY", "false").lower() == "true"
+MAX_RUN_SECONDS = int(os.environ.get("JEV_WORKER_MAX_RUN_SECONDS", "120"))
+MAX_CONCURRENT_RUNS = int(os.environ.get("JEV_WORKER_MAX_CONCURRENT_RUNS", "1"))
+RUN_GATE = threading.BoundedSemaphore(MAX_CONCURRENT_RUNS)
+
+
+def _is_local_host(host):
+    return host in {"127.0.0.1", "localhost", "::1"}
+
+
+if not _is_local_host(HOST) and not TOKEN:
+    raise RuntimeError("JEV_WORKER_TOKEN_REQUIRED")
 
 
 def attestation():
@@ -53,6 +68,10 @@ class Handler(BaseHTTPRequestHandler):
             return self.send_json(404, {"error": "NOT_FOUND"})
         if TOKEN and self.headers.get("Authorization") != "Bearer " + TOKEN:
             return self.send_json(401, {"error": "WORKER_AUTH_REQUIRED"})
+        if not RUN_GATE.acquire(blocking=False):
+            return self.send_json(429, {"error": "WORKER_BUSY", "retry": False})
+
+        started = time.monotonic()
         try:
             length = int(self.headers.get("Content-Length", "0"))
             if length <= 0 or length > 16384:
@@ -62,7 +81,7 @@ class Handler(BaseHTTPRequestHandler):
             url = body.get("url")
             if not isinstance(goal, str) or not goal.strip() or len(goal) > 2000:
                 raise ValueError("GOAL_INVALID")
-            if not isinstance(url, str) or urlparse(url).scheme not in {"http", "https"}:
+            if not isinstance(url, str) or len(url) > 4096 or urlparse(url).scheme not in {"http", "https"}:
                 raise ValueError("URL_INVALID")
             if HEALTH_ONLY:
                 return self.send_json(503, {"error": "WORKER_HEALTH_ONLY"})
@@ -71,22 +90,32 @@ class Handler(BaseHTTPRequestHandler):
             try:
                 snapshot = None
                 for snapshot in agent.run():
-                    pass
+                    if time.monotonic() - started > MAX_RUN_SECONDS:
+                        raise TimeoutError("JEV_EXECUTION_TIMEOUT")
+                if not snapshot or snapshot.get("status") not in {"done", "blocked"}:
+                    raise RuntimeError("JEV_TERMINAL_STATE_MISSING")
                 return self.send_json(200, {
                     "protocol_version": "JEV-WORKER-RUN-1.0",
                     "worker_id": WORKER_ID,
-                    "status": snapshot.get("status") if snapshot else "UNKNOWN",
+                    "status": snapshot.get("status"),
                     "snapshot": snapshot,
-                    "completion_assertion": snapshot.get("status") if snapshot else None,
                 })
             finally:
                 agent.close()
+        except TimeoutError as error:
+            return self.send_json(504, {
+                "error": "JEV_EXECUTION_TIMEOUT",
+                "detail": str(error),
+                "retry": False,
+            })
         except Exception as error:
             return self.send_json(400, {
                 "error": "JEV_EXECUTION_FAILED",
                 "detail": str(error),
                 "retry": False,
             })
+        finally:
+            RUN_GATE.release()
 
     def log_message(self, *_args):
         pass
@@ -94,6 +123,7 @@ class Handler(BaseHTTPRequestHandler):
 
 def main():
     server = ThreadingHTTPServer((HOST, PORT), Handler)
+    server.daemon_threads = True
     print(f"JEV worker {WORKER_ID} listening on {HOST}:{PORT}", flush=True)
     server.serve_forever()
 
