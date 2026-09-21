@@ -42,12 +42,13 @@ export function classifyProductionGate(evidence = {}) {
     .map((gate) => gate.reason)
     .filter(Boolean);
 
-  const remediation = Object.values(gates)
+  const remediation_required = Object.values(gates)
     .some((gate) => gate.status === 'REMEDIATION_REQUIRED');
 
   return {
-    status: remediation ? 'REMEDIATION_REQUIRED' : blockers.length === 0 ? 'VERIFIED' : 'BLOCKED',
+    status: blockers.length === 0 ? 'VERIFIED' : 'BLOCKED',
     verified: blockers.length === 0,
+    remediation_required,
     blockers,
     gates,
   };
