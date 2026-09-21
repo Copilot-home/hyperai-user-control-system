@@ -173,10 +173,19 @@ async function waitForStableRuntimeAuthority({ backendPort, frontendPort, laneLa
   await waitForUrl(`http://127.0.0.1:${backendPort}/api/health`, `${laneLabel} backend stability`);
   await waitForUrl(`http://127.0.0.1:${frontendPort}`, `${laneLabel} frontend stability`);
   const runtime = await inspectRuntimeAuthority({ backendPort, frontendPort });
-  if (!runtime.backendAuthority?.process || !runtime.frontendAuthority?.process) {
-    throw new Error(`${laneLabel} authority lost its listener before manifest persistence.`);
+  if (!runtime.probes?.health?.ok || !runtime.probes?.frontend?.ok) {
+    throw new Error(`${laneLabel} authority probes failed before manifest persistence.`);
   }
-  return runtime;
+
+  // Listener ownership metadata is platform-dependent. HTTP probes are the
+  // authoritative liveness proof; missing process metadata must not invalidate
+  // an otherwise live listener.
+  if (!runtime.backendAuthority?.process || !runtime.frontendAuthority?.process) {
+    runtime.authorityObservation = "probe-verified-process-metadata-unavailable";
+  } else {
+    runtime.authorityObservation = "probe-and-process-verified";
+  }
+  return runtime;;
 }
 
 function spawnDetached(command, args, env) {
