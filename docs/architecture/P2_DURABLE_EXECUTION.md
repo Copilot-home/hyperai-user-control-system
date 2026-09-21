@@ -45,15 +45,18 @@ The current repository boundary intentionally has no database driver dependency 
 
 ## Gate
 
-P2 acceptance has now been exercised by the repository's real PostgreSQL integration lane in GitHub Actions. The verified run demonstrates:
+P2 acceptance is a repository-level contract. A completed CI run must prove the following against the current commit:
 
 1. append survives a pool/process boundary;
 2. duplicate aggregate sequence is rejected;
 3. event + projection writes are transaction-bound;
 4. idempotency claims survive repository recreation;
 5. replay reconstructs state from the hash-chained event stream;
-6. the E-D NARSG contract suite continues to preserve UNKNOWN mutation semantics.
+6. the E-D NARSG contract suite preserves UNKNOWN mutation semantics;
+7. the durable adapter rejects tampered event hashes and broken predecessor links before commit.
 
-P2 STATUS: VERIFIED
+The repository now contains the production PostgreSQL adapter and real integration lane. The current repair head has changed the durable event boundary since the last recorded green checkpoint, so that historical checkpoint is not reused as proof for the current head.
 
-Evidence: HyperAI CI durable PostgreSQL integration + E-D NARSG contract + browser/autonomous boundary jobs all completed successfully on the verified head.
+P2 STATUS: RE-VERIFICATION_REQUIRED
+
+Exact gate: `CI_CURRENT_HEAD_NOT_YET_VERIFIED`
