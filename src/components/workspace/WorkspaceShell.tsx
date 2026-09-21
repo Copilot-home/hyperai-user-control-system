@@ -145,7 +145,7 @@ const WorkspaceShell: React.FC<WorkspaceShellProps> = ({ initialTab = 'overview'
         [missions, routing, session],
     );
 
-    const visibleParticipants = routing?.selected_nodes || graph.filter((node) => node.node_id === currentMission?.mission_root);
+    const visibleParticipants = routing?.selected_nodes || (Array.isArray(graph) ? graph.filter((node) => node.node_id === currentMission?.mission_root) : []);
     const driftCounts = proof?.drift_summary?.counts || session?.intelligence?.drift_counts || {};
     const maturityCounts = session?.intelligence?.maturity_level_counts || {};
     const controlSignals = session?.system_control?.filtered_signals || [];
