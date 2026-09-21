@@ -56,7 +56,17 @@ test('real uniqueness rejects duplicate aggregate sequence', async () => {
   const first = createEvent({ id: prefix + '-duplicate-1', correlation_id: prefix, aggregate_id: aggregateId, event_type: 'DUPLICATE' });
   await store.appendEvent(first);
   const duplicate = createEvent({ id: prefix + '-duplicate-2', correlation_id: prefix, aggregate_id: aggregateId, event_type: 'DUPLICATE', sequence: 0 });
-  await assert.rejects(() => store.appendEvent(duplicate), /duplicate|unique/i);
+  await assert.rejects(() => store.appendEvent(duplicate), /EVENT_SEQUENCE_GAP/);
+});
+
+test('real database rejects tampered event hash', async () => {
+  const aggregateId = prefix + '-tampered';
+  const event = createEvent({ id: prefix + '-tampered-1', correlation_id: prefix, aggregate_id: aggregateId, event_type: 'TAMPERED' });
+  await assert.rejects(
+    () => store.appendEvent({ ...event, event_hash: 'tampered-hash' }),
+    /EVENT_HASH_INVALID/,
+  );
+  assert.equal((await repository.loadAggregate(aggregateId)).events.length, 0);
 });
 
 test('real idempotency survives duplicate claim', async () => {
