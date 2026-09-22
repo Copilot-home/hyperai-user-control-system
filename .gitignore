@@ -19,3 +19,4 @@ node-output.log
 .lsp/
 .qodo/
 .sixth/
+da_engine/private_key.pem

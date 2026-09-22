@@ -4,6 +4,7 @@ on:
   push:
     branches:
       - main
+      - audit/2026-09-21-runtime-proxy-repair
   pull_request:
     branches:
       - main
@@ -24,7 +25,8 @@ jobs:
       - name: Checkout
         run: |
           git clone "https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}.git" .
-          git checkout "${{ github.ref_name }}"
+          git fetch --no-tags origin "${{ github.ref }}"
+          git checkout --detach FETCH_HEAD
 
       - name: Validate Docker surface
         run: node scripts/ci/validate-docker-surface.mjs
@@ -36,7 +38,8 @@ jobs:
       - name: Checkout
         run: |
           git clone "https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}.git" .
-          git checkout "${{ github.ref_name }}"
+          git fetch --no-tags origin "${{ github.ref }}"
+          git checkout --detach FETCH_HEAD
 
       - name: Set up Node.js and Python
         run: |
@@ -55,11 +58,10 @@ jobs:
             --ecosystem-email "nguyencuong.2509@icloud.com" | tee identity.json
 
       - name: Install dependencies
-        run: npm ci
+        run: npm install --no-audit --no-fund
 
       - name: Build production artifact
         run: npm run ci:build
-
   browser-agent-smoke:
     runs-on: ubuntu-latest
     timeout-minutes: 20
@@ -68,7 +70,8 @@ jobs:
       - name: Checkout
         run: |
           git clone "https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}.git" .
-          git checkout "${{ github.ref_name }}"
+          git fetch --no-tags origin "${{ github.ref }}"
+          git checkout --detach FETCH_HEAD
 
       - name: Set up Node.js
         run: |
@@ -78,7 +81,7 @@ jobs:
           npm --version
 
       - name: Install dependencies
-        run: npm ci
+        run: npm install --no-audit --no-fund
 
       - name: Build production artifact
         run: npm run ci:build
@@ -113,7 +116,8 @@ jobs:
       - name: Checkout
         run: |
           git clone "https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}.git" .
-          git checkout "${{ github.ref_name }}"
+          git fetch --no-tags origin "${{ github.ref }}"
+          git checkout --detach FETCH_HEAD
 
       - name: Set up Node.js
         run: |
@@ -123,7 +127,7 @@ jobs:
           npm --version
 
       - name: Install dependencies
-        run: npm ci
+        run: npm install --no-audit --no-fund
 
       - name: Build production artifact
         run: npm run ci:build
@@ -135,6 +139,7 @@ jobs:
         env:
           SMOKE_TIMEOUT_MS: "90000"
           AUTONOMY_RECOVERY_WAIT_MS: "22000"
+          HYPERAI_BUILD_API_BASE_URL: "http://127.0.0.1:5000/api"
         run: npm run ci:autonomous-boundary-proof
 
   legacy-test-audit:
@@ -145,7 +150,8 @@ jobs:
       - name: Checkout
         run: |
           git clone "https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}.git" .
-          git checkout "${{ github.ref_name }}"
+          git fetch --no-tags origin "${{ github.ref }}"
+          git checkout --detach FETCH_HEAD
 
       - name: Set up Node.js
         run: |
@@ -155,7 +161,76 @@ jobs:
           npm --version
 
       - name: Install dependencies
-        run: npm ci
+        run: npm install --no-audit --no-fund
 
       - name: Run legacy Jest audit
         run: npm test -- --runInBand
+
+  ed-narsg-contract:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout
+        run: |
+          git clone "https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}.git" .
+          git fetch --no-tags origin "${{ github.ref }}"
+          git checkout --detach FETCH_HEAD
+
+      - name: Set up Node.js
+        run: |
+          curl -fsSL https://deb.nodesource.com/setup_20.x | sudo bash -
+          sudo apt-get install -y nodejs
+          node --version
+          npm --version
+
+      - name: Install dependencies
+        run: npm install --no-audit --no-fund
+
+      - name: Run runtime dependency security audit
+        run: npm audit --omit=dev --audit-level=low
+
+      - name: Validate Jev worker Python boundary
+        run: python3 -m py_compile jev-worker/server.py
+
+      - name: Run E-D NARSG contract tests
+        run: npm run test:ed-narsg
+
+  durable-postgres-integration:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: postgres
+        options: >-
+          --health-cmd "pg_isready -U postgres -d postgres"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 12
+        ports:
+          - 5432:5432
+    steps:
+      - name: Checkout
+        run: |
+          git clone "https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}.git" .
+          git fetch --no-tags origin "${{ github.ref }}"
+          git checkout --detach FETCH_HEAD
+      - name: Set up Node.js
+        run: |
+          curl -fsSL https://deb.nodesource.com/setup_20.x | sudo bash -
+          sudo apt-get install -y nodejs
+          node --version
+          npm --version
+      - name: Install dependencies
+        run: npm install --no-audit --no-fund
+      - name: Run real PostgreSQL durability proof
+        env:
+          ED_NARSG_POSTGRES_INTEGRATION: "true"
+          PGHOST: 127.0.0.1
+          PGPORT: 5432
+          PGUSER: postgres
+          PGPASSWORD: postgres
+          PGDATABASE: postgres
+        run: node --test tests/ed-narsg/postgres-durable.integration.test.mjs

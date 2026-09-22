@@ -78,11 +78,11 @@ const WorkspaceShell: React.FC<WorkspaceShellProps> = ({ initialTab = 'overview'
                 getWorkspaceProviders(),
             ]);
             setSession(nextSession);
-            setGraph(nextGraph.nodes);
-            setLanes(nextLanes.lanes);
-            setRuntimes(nextRuntimes);
-            setConnectors(nextConnectors);
-            setMissions(nextMissions.bindings);
+            setGraph(Array.isArray(nextGraph?.nodes) ? nextGraph.nodes : []);
+            setLanes(Array.isArray(nextLanes?.lanes) ? nextLanes.lanes : []);
+            setRuntimes(Array.isArray(nextRuntimes) ? nextRuntimes : []);
+            setConnectors(Array.isArray(nextConnectors) ? nextConnectors : []);
+            setMissions(Array.isArray(nextMissions?.bindings) ? nextMissions.bindings : []);
             setProof(nextProof);
             setProviders(nextProviders);
             setError(null);
@@ -129,7 +129,7 @@ const WorkspaceShell: React.FC<WorkspaceShellProps> = ({ initialTab = 'overview'
     };
 
     const promoteCurrentTask = async () => {
-        const intent = routing?.mission_id || session?.session.current_mission_id || 'reasoning_request';
+        const intent = routing?.mission_id || session?.session?.current_mission_id || 'reasoning_request';
         await createWorkspaceMission({
             title: routing?.reply || draft || 'Workspace mission',
             intent,
@@ -141,11 +141,11 @@ const WorkspaceShell: React.FC<WorkspaceShellProps> = ({ initialTab = 'overview'
     };
 
     const currentMission = useMemo(
-        () => missions.find((mission) => mission.mission_id === (routing?.mission_id || session?.session.current_mission_id)),
+        () => missions.find((mission) => mission.mission_id === (routing?.mission_id || session?.session?.current_mission_id)),
         [missions, routing, session],
     );
 
-    const visibleParticipants = routing?.selected_nodes || graph.filter((node) => node.node_id === currentMission?.mission_root);
+    const visibleParticipants = routing?.selected_nodes || (Array.isArray(graph) ? graph.filter((node) => node.node_id === currentMission?.mission_root) : []);
     const driftCounts = proof?.drift_summary?.counts || session?.intelligence?.drift_counts || {};
     const maturityCounts = session?.intelligence?.maturity_level_counts || {};
     const controlSignals = session?.system_control?.filtered_signals || [];
@@ -242,9 +242,9 @@ const WorkspaceShell: React.FC<WorkspaceShellProps> = ({ initialTab = 'overview'
                             Chat la trung tam. HyperAI tu chon conversation, compare, mission, provider, hoac operator mode theo task.
                         </p>
                         <div className={styles.metaRow}>
-                            <span>Boundary: {session?.shell.boundary_state || 'unknown'}</span>
-                            <span>Action: {session?.shell.selected_action || 'hold'}</span>
-                            <span>Mode: {routing?.mode || session?.session.mode || 'conversation_mode'}</span>
+                            <span>Boundary: {session?.shell?.boundary_state || 'unknown'}</span>
+                            <span>Action: {session?.shell?.selected_action || 'hold'}</span>
+                            <span>Mode: {routing?.mode || session?.session?.mode || 'conversation_mode'}</span>
                             <span>OODA: {session?.orchestration?.mode || 'preservation_only'}</span>
                             <span>Agent chain: {session?.orchestration?.agent_chain_status || 'not_requested'}</span>
                             <span>Law: {session?.creator_law?.status || 'unknown'}</span>
@@ -280,16 +280,16 @@ const WorkspaceShell: React.FC<WorkspaceShellProps> = ({ initialTab = 'overview'
                     <div className={styles.responseCard}>
                         <div className={styles.responseHeader}>
                             <h2>Conversation Core</h2>
-                            <span>{routing?.synthesis.strategy || 'waiting_for_route'}</span>
+                            <span>{routing?.synthesis?.strategy || 'waiting_for_route'}</span>
                         </div>
-                        <p className={styles.responseText}>{routing?.reply || session?.session.last_route_summary || 'Chua co route moi. Dung companion rail de goi lane hoac bat dau bang chat.'}</p>
+                        <p className={styles.responseText}>{routing?.reply || session?.session?.last_route_summary || 'Chua co route moi. Dung companion rail de goi lane hoac bat dau bang chat.'}</p>
                         <div className={styles.participantGrid}>
                             {visibleParticipants.map((node) => (
                                 <div key={node.node_id} className={styles.participantCard}>
                                     <strong>{node.label}</strong>
                                     <span>{node.orchestrator_family}</span>
                                     <span>{node.node_origin}</span>
-                                    <span>proof: {node.proof_state.fresh ? 'fresh' : 'stale'}</span>
+                                    <span>proof: {node.proof_state?.fresh ? 'fresh' : 'stale'}</span>
                                 </div>
                             ))}
                         </div>
@@ -487,8 +487,8 @@ const WorkspaceShell: React.FC<WorkspaceShellProps> = ({ initialTab = 'overview'
                 <aside className={styles.companionRail}>
                     <div className={styles.railSection}>
                         <h2>Companion Rail</h2>
-                        <p>{String(session?.companion.preferred_approval_surface?.process_name || 'No preferred approval surface detected.')}</p>
-                        <p className={styles.smallText}>Active creator surfaces: {session?.companion.active_creator_surfaces.length || 0}</p>
+                        <p>{String(session?.companion?.preferred_approval_surface?.process_name || 'No preferred approval surface detected.')}</p>
+                        <p className={styles.smallText}>Active creator surfaces: {session?.companion?.active_creator_surfaces?.length || 0}</p>
                     </div>
                     <div className={styles.railSection}>
                         <h3>AI lanes</h3>
@@ -501,7 +501,7 @@ const WorkspaceShell: React.FC<WorkspaceShellProps> = ({ initialTab = 'overview'
                     </div>
                     <div className={styles.railSection}>
                         <h3>Status + Proof</h3>
-                        {proof?.proof_timeline.map((item) => (
+                        {(proof?.proof_timeline || []).map((item) => (
                             <div key={item.id} className={styles.statusRow}>
                                 <strong>{item.label}</strong>
                                 <span>{item.status}</span>
@@ -543,12 +543,12 @@ const WorkspaceShell: React.FC<WorkspaceShellProps> = ({ initialTab = 'overview'
                             </div>
                             <div className={styles.panelCard}>
                                 <h3>System-owned runtimes</h3>
-                                <p>{runtimes.length} runtime nodes available in the workspace graph.</p>
+                                <p>{Array.isArray(runtimes) ? runtimes.length : 0} runtime nodes available in the workspace graph.</p>
                                 <p>System-owned app runtimes duoc render nhu sub-workspaces, khong chi la connector.</p>
                             </div>
                             <div className={styles.panelCard}>
                                 <h3>Observed collisions</h3>
-                                <p>{proof?.collisions.length || 0} collision(s) in drift guard.</p>
+                                <p>{proof?.collisions?.length || 0} collision(s) in drift guard.</p>
                                 <p>{error || 'Workspace shell dang on dinh.'}</p>
                             </div>
                             <div className={styles.panelCard}>
@@ -598,8 +598,8 @@ const WorkspaceShell: React.FC<WorkspaceShellProps> = ({ initialTab = 'overview'
                                     <p>status: {node.status}</p>
                                      <p>maturity: {node.current_maturity || 'unmapped'}</p>
                                      <p>connector: {node.connector_binding || 'unbound'}</p>
-                                    <p>roles: {node.allowed_mission_roles.join(', ') || 'none'}</p>
-                                    <p>proof: {node.proof_state.fresh ? 'fresh' : 'stale'}</p>
+                                    <p>roles: {(node.allowed_mission_roles || []).join(', ') || 'none'}</p>
+                                    <p>proof: {node.proof_state?.fresh ? 'fresh' : 'stale'}</p>
                                 </div>
                             ))}
                         </div>
@@ -610,7 +610,7 @@ const WorkspaceShell: React.FC<WorkspaceShellProps> = ({ initialTab = 'overview'
                     <div className={styles.tabPanel}>
                         <h2>Proof Rail</h2>
                         <div className={styles.listGrid}>
-                            {proof?.mission_roots.map((item) => (
+                            {(proof?.mission_roots || []).map((item) => (
                                 <div key={item.node_id} className={styles.listCard}>
                                     <h3>{item.node_id}</h3>
                                     <p>status: {item.status}</p>
@@ -656,12 +656,12 @@ const WorkspaceShell: React.FC<WorkspaceShellProps> = ({ initialTab = 'overview'
                     <div className={styles.tabPanel}>
                         <h2>Provider Surface</h2>
                         <div className={styles.listGrid}>
-                            {providers?.providers.map((provider) => (
+                            {(providers?.providers || []).map((provider) => (
                                 <div key={provider.node_id} className={styles.listCard}>
                                     <h3>{provider.label}</h3>
                                     <p>status: {provider.status}</p>
-                                    <p>reasoning: {provider.reasoning_capability.join(', ') || 'none'}</p>
-                                    <p>behavior: {provider.behavior_capability.join(', ') || 'none'}</p>
+                                    <p>reasoning: {(provider.reasoning_capability || []).join(', ') || 'none'}</p>
+                                    <p>behavior: {(provider.behavior_capability || []).join(', ') || 'none'}</p>
                                 </div>
                             ))}
                         </div>

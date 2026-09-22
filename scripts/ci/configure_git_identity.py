@@ -64,11 +64,11 @@ def main() -> int:
         run_git_config("user.name", git_name)
         run_git_config("user.email", selected_email)
         run_git_config("hyperai.identity.scope", args.scope)
-        run_git_config("hyperai.identity.git_name", git_name)
+        run_git_config("hyperai.identity.git-name", git_name)
         if product_email:
-            run_git_config("hyperai.identity.product_email", product_email)
+            run_git_config("hyperai.identity.product-email", product_email)
         if ecosystem_email:
-            run_git_config("hyperai.identity.ecosystem_email", ecosystem_email)
+            run_git_config("hyperai.identity.ecosystem-email", ecosystem_email)
         payload["status"] = "configured"
     else:
         payload["status"] = "planned_no_git_repo"

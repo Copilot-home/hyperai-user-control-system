@@ -1,0 +1,40 @@
+name: Production evidence gate
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+
+permissions:
+  contents: read
+
+jobs:
+  production-evidence-gate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Checkout
+        run: |
+          git clone "https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}.git" .
+          git fetch --no-tags origin "${{ github.sha }}"
+          git checkout --detach FETCH_HEAD
+
+      - name: Set up Node.js
+        run: |
+          curl -fsSL https://deb.nodesource.com/setup_20.x | sudo bash -
+          sudo apt-get install -y nodejs
+          node --version
+          npm --version
+
+      - name: Install dependencies
+        run: npm install --no-audit --no-fund
+
+      - name: Run fail-closed production evidence gate
+        run: npm run ci:production-evidence-gate
+
+      - name: Upload machine-readable gate report
+        if: always()
+        run: |
+          test -f artifacts/production-evidence-gate.json
+          cat artifacts/production-evidence-gate.json

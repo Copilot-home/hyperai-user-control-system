@@ -1,6 +1,6 @@
 import { RuntimeCapabilitiesResponse } from '../types/runtime.types';
 
-const DEFAULT_API_ORIGIN = 'http://localhost:5000';
+const DEFAULT_API_ORIGIN = 'http://127.0.0.1:5000';
 const RUNTIME_AUTHORITY_STORAGE_KEY = 'hyperai.runtime.authority';
 const RUNTIME_API_ORIGIN_OVERRIDE_KEY = 'hyperai_runtime_api_origin';
 

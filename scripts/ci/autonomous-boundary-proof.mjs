@@ -149,15 +149,15 @@ async function verifyBrowserShell({ frontendUrl }) {
         {
           label: "autonomy-heading",
           strategies: [
-            { type: "role", role: "heading", options: { name: "Autonomy Control Plane" } },
             { type: "text", text: "Autonomy Control Plane", options: { exact: true } },
+            { type: "role", role: "heading", options: { name: "Autonomy Control Plane" } },
           ],
         },
         {
           label: "boundary-state",
           strategies: [
-            { type: "role", role: "heading", options: { name: "Boundary State", exact: true } },
             { type: "text", text: "Boundary State", options: { exact: true } },
+            { type: "role", role: "heading", options: { name: "Boundary State", exact: true } },
           ],
         },
         {
@@ -178,6 +178,44 @@ async function verifyBrowserShell({ frontendUrl }) {
     await page.getByText("Boundary State", { exact: true }).waitFor({ timeout: timeoutMs });
     await page.getByText("Autonomous Policy Authority", { exact: true }).waitFor({ timeout: timeoutMs });
 
+    try {
+      await page.waitForFunction(() => {
+        try {
+          const raw = window.localStorage.getItem("hyperai_autonomy_boundary_snapshot");
+          const state = raw ? JSON.parse(raw) : null;
+          return state?.state === "autonomous";
+        } catch {
+          return false;
+        }
+      }, null, { timeout: Math.min(timeoutMs, 15000) });
+    } catch (error) {
+      const diagnostics = await page.evaluate(() => ({
+        href: window.location.href,
+        snapshot: window.localStorage.getItem("hyperai_autonomy_boundary_snapshot"),
+        runtimeAuthority: window.localStorage.getItem("hyperai.runtime.authority"),
+        override: window.localStorage.getItem("hyperai_runtime_api_origin"),
+      }));
+      let capabilities = null;
+      try {
+        const response = await page.evaluate(async () => {
+          const raw = window.localStorage.getItem("hyperai.runtime.authority");
+          const authority = raw ? JSON.parse(raw) : null;
+          const origin = authority?.apiOrigin || "http://localhost:5000";
+          const result = await fetch(`${origin}/api/runtime/capabilities`);
+          return { status: result.status, body: await result.json() };
+        });
+        capabilities = response;
+      } catch (probeError) {
+        capabilities = { error: probeError instanceof Error ? probeError.message : String(probeError) };
+      }
+      console.error("[autonomous-boundary-proof] browser convergence diagnostics", JSON.stringify({
+        error: error instanceof Error ? error.message : String(error),
+        diagnostics,
+        capabilities,
+      }));
+      throw error;
+    }
+
     const shellState = await page.evaluate(() => {
       const raw = window.localStorage.getItem("hyperai_autonomy_boundary_snapshot");
       return raw ? JSON.parse(raw) : null;
@@ -185,7 +223,6 @@ async function verifyBrowserShell({ frontendUrl }) {
 
     assert(shellState, "Browser shell did not persist an autonomy boundary snapshot.");
     assert(shellState.state === "autonomous", `Browser shell boundary snapshot drifted to ${shellState.state}.`);
-
     return {
       shellBoundaryState: shellState.state,
       shellRecoveryAction: shellState.recoveryAction ?? null,
@@ -237,9 +274,12 @@ async function main() {
     frontendUrl,
   });
 
+  // /api/runtime/capabilities is the runtime policy materialization boundary.
+  // Probe it before reading the persisted manifest so the proof checks the same
+  // authority artifact that the live control plane exposes.
+  await fetchJson(`${backendUrl}/api/runtime/capabilities`);
   const policyManifest = readPolicyManifest();
-  assert(policyManifest, "Policy manifest did not materialize after runtime bootstrap.");
-  const policyBoundary = policyManifest.boundary_state ?? policyManifest.haios_state;
+  assert(policyManifest, "Policy manifest did not materialize after runtime bootstrap.");  const policyBoundary = policyManifest.boundary_state ?? policyManifest.haios_state;
   assert(policyBoundary === "autonomous", `Manifest policy reports boundary ${policyBoundary}.`);
   assert(
     policyManifest.selected_action === manifest.selected_action,

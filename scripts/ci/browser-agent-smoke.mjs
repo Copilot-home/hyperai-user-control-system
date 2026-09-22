@@ -417,6 +417,33 @@ async function verifyBrowser() {
   );
   const browser = await chromium.launch({ headless: true });
   const page = await browser.newPage({ viewport: { width: 1440, height: 900 } });
+  const browserDiagnostics = {
+    console: [],
+    page_errors: [],
+    request_failed: [],
+  };
+  page.on("console", (message) => {
+    if (browserDiagnostics.console.length < 50) {
+      browserDiagnostics.console.push({
+        type: message.type(),
+        text: message.text().slice(0, 1000),
+      });
+    }
+  });
+  page.on("pageerror", (error) => {
+    if (browserDiagnostics.page_errors.length < 20) {
+      browserDiagnostics.page_errors.push(error instanceof Error ? error.stack || error.message : String(error));
+    }
+  });
+  page.on("requestfailed", (request) => {
+    if (browserDiagnostics.request_failed.length < 50) {
+      browserDiagnostics.request_failed.push({
+        url: request.url(),
+        method: request.method(),
+        failure: request.failure()?.errorText || "unknown",
+      });
+    }
+  });
 
   try {
     const autoSyncHome = await verificationSync.verifyPageContract({
@@ -447,7 +474,57 @@ async function verifyBrowser() {
 
     await page.goto(FRONTEND_URL, { waitUntil: "domcontentloaded", timeout: TIMEOUT_MS });
     await page.waitForLoadState("domcontentloaded");
-    await page.locator("body").waitFor({ state: "visible", timeout: TIMEOUT_MS });
+    try {
+      await page.getByText("Conversation Core", { exact: true }).waitFor({ state: "visible", timeout: Math.min(TIMEOUT_MS, 10000) });
+    } catch (error) {
+      const diagnosticSnapshot = await page.evaluate(() => ({
+        ready_state: document.readyState,
+        url: window.location.href,
+        root_present: Boolean(document.getElementById("root")),
+        root_child_count: document.getElementById("root")?.children.length ?? 0,
+        body_text_excerpt: document.body?.innerText?.slice(0, 2000) ?? "",
+        root_html_excerpt: document.getElementById("root")?.innerHTML?.slice(0, 4000) ?? "",
+      })).catch(() => ({ ready_state: "unknown", url: page.url(), root_present: false, root_child_count: 0, body_text_excerpt: "", root_html_excerpt: "" }));
+      console.error(
+        JSON.stringify(
+          {
+            browser_failure: "conversation-core-not-visible",
+            error: error instanceof Error ? error.stack || error.message : String(error),
+            snapshot: diagnosticSnapshot,
+            diagnostics: browserDiagnostics,
+          },
+          null,
+          2,
+        ),
+      );
+      const diagnosticsDir = path.join(runtimeDir, "verification");
+      try {
+        const html = await page.content();
+        const bodyText = await page.locator("body").innerText().catch(() => "");
+        const screenshotPath = path.join(diagnosticsDir, "browser-smoke-failure.png");
+        const htmlPath = path.join(diagnosticsDir, "browser-smoke-failure.html");
+        const diagnosticsPath = path.join(diagnosticsDir, "browser-smoke-diagnostics.json");
+        await page.screenshot({ path: screenshotPath, fullPage: true });
+        writeFileSync(htmlPath, html, "utf8");
+        writeFileSync(
+          diagnosticsPath,
+          JSON.stringify({
+            at: new Date().toISOString(),
+            frontend_url: FRONTEND_URL,
+            final_url: page.url(),
+            body_text_excerpt: bodyText.slice(0, 2000),
+            diagnostics: browserDiagnostics,
+            error: error instanceof Error ? error.stack || error.message : String(error),
+          }, null, 2) + "\\n",
+          "utf8"
+        );
+      } catch (diagnosticError) {
+        console.warn("Unable to persist browser diagnostics:", diagnosticError);
+      }
+      throw new Error(
+        `Conversation Core not visible. snapshot=${JSON.stringify(diagnosticSnapshot)} page_errors=${JSON.stringify(browserDiagnostics.page_errors)} console=${JSON.stringify(browserDiagnostics.console.slice(-20))}`
+      );
+    }
 
     const bodyText = await page.locator("body").innerText();
     const requiredMarkers = ["HyperAI Unified Workspace", "Conversation Core", "Companion Rail"];
@@ -461,22 +538,47 @@ async function verifyBrowser() {
 
     await page.getByRole("button", { name: "Promote to mission" }).click();
     await page.goto(`${FRONTEND_URL}/missions`, { waitUntil: "domcontentloaded", timeout: TIMEOUT_MS });
-    await page.locator("body").waitFor({ state: "visible", timeout: TIMEOUT_MS });
+    await page.getByText("Mission Board", { exact: false }).waitFor({ state: "visible", timeout: TIMEOUT_MS });
     if (!page.url().endsWith("/missions")) {
       throw new Error(`Expected missions route after promotion, saw ${page.url()}`);
     }
 
     await page.goto(`${FRONTEND_URL}/systems`, { waitUntil: "domcontentloaded", timeout: TIMEOUT_MS });
-    await page.locator("body").waitFor({ state: "visible", timeout: TIMEOUT_MS });
-    await page.getByText("System Graph", { exact: false }).waitFor({ timeout: TIMEOUT_MS });
+    await page.getByText("System Graph", { exact: false }).waitFor({ state: "visible", timeout: TIMEOUT_MS });
 
     await page.goto(`${FRONTEND_URL}/symphony-control`, { waitUntil: "domcontentloaded", timeout: TIMEOUT_MS });
-    await page.locator("body").waitFor({ state: "visible", timeout: TIMEOUT_MS });
-    await page.getByText("Symphony Control Panel", { exact: false }).waitFor({ timeout: TIMEOUT_MS });
+    try {
+      await page.getByText("Symphony Control Panel", { exact: false }).waitFor({ state: "visible", timeout: TIMEOUT_MS });
+    } catch (error) {
+      const symphonySnapshot = await page.evaluate(() => ({
+        ready_state: document.readyState,
+        url: window.location.href,
+        root_present: Boolean(document.getElementById("root")),
+        root_child_count: document.getElementById("root")?.children.length ?? 0,
+        body_text_excerpt: document.body?.innerText?.slice(0, 2500) ?? "",
+        root_html_excerpt: document.getElementById("root")?.innerHTML?.slice(0, 5000) ?? "",
+      })).catch(() => ({
+        ready_state: "unknown",
+        url: page.url(),
+        root_present: false,
+        root_child_count: 0,
+        body_text_excerpt: "",
+        root_html_excerpt: "",
+      }));
+      console.error(JSON.stringify({
+        browser_failure: "symphony-control-marker-not-visible",
+        error: error instanceof Error ? error.stack || error.message : String(error),
+        snapshot: symphonySnapshot,
+        diagnostics: browserDiagnostics,
+      }, null, 2));
+      throw new Error(
+        `Symphony Control Panel not visible. snapshot=${JSON.stringify(symphonySnapshot)} page_errors=${JSON.stringify(browserDiagnostics.page_errors)} console=${JSON.stringify(browserDiagnostics.console.slice(-20))}`
+      );
+    }
 
     if (restoreSymphonyAfterBrowser) {
       await page.goto(FRONTEND_URL, { waitUntil: "domcontentloaded", timeout: TIMEOUT_MS });
-      await page.locator("body").waitFor({ state: "visible", timeout: TIMEOUT_MS });
+      await page.getByText("Conversation Core", { exact: true }).waitFor({ state: "visible", timeout: TIMEOUT_MS });
     }
 
     const title = await page.title();

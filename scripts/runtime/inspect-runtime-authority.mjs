@@ -45,7 +45,8 @@ function runPowerShellJson(command) {
 }
 
 function getListeningProcess(port) {
-  const command = `
+  if (process.platform === "win32") {
+    const command = `
 $conn = Get-NetTCPConnection -LocalPort ${port} -State Listen -ErrorAction SilentlyContinue | Select-Object -First 1
 if (-not $conn) { return }
 $proc = Get-CimInstance Win32_Process -Filter "ProcessId = $($conn.OwningProcess)"
@@ -60,9 +61,31 @@ if ($proc -and $proc.CreationDate) {
   localPort = ${port}
 } | ConvertTo-Json -Compress
 `;
-  return runPowerShellJson(command);
-}
+    return runPowerShellJson(command);
+  }
 
+  try {
+    const output = execFileSync(
+      "lsof",
+      ["-nP", `-iTCP:${port}`, "-sTCP:LISTEN", "-FpFc"],
+      { encoding: "utf8" },
+    ).trim();
+    if (!output) return null;
+    const pidMatch = output.match(/(?:^|\\n)p(\\d+)/);
+    if (!pidMatch) return null;
+    const pid = Number(pidMatch[1]);
+    const commandLine = execFileSync("ps", ["-p", String(pid), "-o", "args="], { encoding: "utf8" }).trim();
+    const creationDate = execFileSync("ps", ["-p", String(pid), "-o", "lstart="], { encoding: "utf8" }).trim();
+    return {
+      pid,
+      commandLine: commandLine || null,
+      creationDate: creationDate ? new Date(creationDate).toISOString() : null,
+      localPort: port,
+    };
+  } catch {
+    return null;
+  }
+}
 async function probeJson(url, options = {}) {
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), 1500);
