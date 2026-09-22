@@ -102,16 +102,14 @@ class Handler(BaseHTTPRequestHandler):
                 })
             finally:
                 agent.close()
-        except TimeoutError as error:
+        except TimeoutError:
             return self.send_json(504, {
                 "error": "JEV_EXECUTION_TIMEOUT",
-                "detail": str(error),
                 "retry": False,
             })
-        except Exception as error:
+        except Exception:
             return self.send_json(400, {
                 "error": "JEV_EXECUTION_FAILED",
-                "detail": str(error),
                 "retry": False,
             })
         finally:
