@@ -73,7 +73,6 @@ test('blocks when package-lock integrity is unverified', () => {
     jev_worker: { verified: true },
     credential_hygiene: { verified: true },
     dependency_security: { verified: true },
-    package_lock_integrity: { verified: true },
     package_lock_integrity: { verified: false, reason: 'PACKAGE_LOCK_OUT_OF_SYNC' },
   });
   assert.equal(result.status, 'BLOCKED');
