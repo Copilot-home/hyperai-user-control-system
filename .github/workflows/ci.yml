@@ -61,14 +61,7 @@ jobs:
         run: npm ci --no-audit --no-fund
 
       - name: Build production artifact
-        run: npm run ci:build
-      - name: Upload production artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: hyperai-dist-${{ github.sha }}
-          path: dist
-          if-no-files-found: error
-  browser-agent-smoke:
+        run: npm run ci:build  browser-agent-smoke:
     runs-on: ubuntu-latest
     timeout-minutes: 20
     needs: build-artifact
@@ -88,12 +81,6 @@ jobs:
 
       - name: Install dependencies
         run: npm ci --no-audit --no-fund
-
-      - name: Download production artifact
-        uses: actions/download-artifact@v4
-        with:
-          name: hyperai-dist-${{ github.sha }}
-          path: dist
 
       - name: Install Playwright
         run: npx playwright install --with-deps chromium
