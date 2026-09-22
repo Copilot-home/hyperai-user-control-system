@@ -58,10 +58,16 @@ jobs:
             --ecosystem-email "nguyencuong.2509@icloud.com" | tee identity.json
 
       - name: Install dependencies
-        run: npm install --no-audit --no-fund
+        run: npm ci --no-audit --no-fund
 
       - name: Build production artifact
         run: npm run ci:build
+      - name: Upload production artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: hyperai-dist-${{ github.sha }}
+          path: dist
+          if-no-files-found: error
   browser-agent-smoke:
     runs-on: ubuntu-latest
     timeout-minutes: 20
@@ -81,10 +87,13 @@ jobs:
           npm --version
 
       - name: Install dependencies
-        run: npm install --no-audit --no-fund
+        run: npm ci --no-audit --no-fund
 
-      - name: Build production artifact
-        run: npm run ci:build
+      - name: Download production artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: hyperai-dist-${{ github.sha }}
+          path: dist
 
       - name: Install Playwright
         run: npx playwright install --with-deps chromium
@@ -127,7 +136,7 @@ jobs:
           npm --version
 
       - name: Install dependencies
-        run: npm install --no-audit --no-fund
+        run: npm ci --no-audit --no-fund
 
       - name: Build production artifact
         run: npm run ci:build
@@ -161,7 +170,7 @@ jobs:
           npm --version
 
       - name: Install dependencies
-        run: npm install --no-audit --no-fund
+        run: npm ci --no-audit --no-fund
 
       - name: Run legacy Jest audit
         run: npm test -- --runInBand
@@ -184,7 +193,7 @@ jobs:
           npm --version
 
       - name: Install dependencies
-        run: npm install --no-audit --no-fund
+        run: npm ci --no-audit --no-fund
 
       - name: Run runtime dependency security audit
         run: npm audit --omit=dev --audit-level=low
@@ -224,7 +233,7 @@ jobs:
           node --version
           npm --version
       - name: Install dependencies
-        run: npm install --no-audit --no-fund
+        run: npm ci --no-audit --no-fund
       - name: Run real PostgreSQL durability proof
         env:
           ED_NARSG_POSTGRES_INTEGRATION: "true"
