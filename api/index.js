@@ -70,6 +70,9 @@ function applyCors(req, res) {
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
 }
 
+const UPSTREAM_TIMEOUT_MS = 15_000;
+const MAX_REQUEST_BODY_BYTES = 1_048_576;
+
 function jsonError(res, status, error, detail) {
   res.status(status).json({ error, detail });
 }
@@ -77,7 +80,16 @@ function jsonError(res, status, error, detail) {
 async function getBody(req) {
   return new Promise((resolve, reject) => {
     const chunks = [];
-    req.on('data', (chunk) => chunks.push(chunk));
+    let total = 0;
+    req.on('data', (chunk) => {
+      total += chunk.length;
+      if (total > MAX_REQUEST_BODY_BYTES) {
+        reject(new Error('REQUEST_BODY_TOO_LARGE'));
+        req.destroy();
+        return;
+      }
+      chunks.push(chunk);
+    });
     req.on('end', () => resolve(Buffer.concat(chunks)));
     req.on('error', reject);
   });
@@ -108,7 +120,11 @@ export default async function handler(req, res) {
         ? await getBody(req)
         : undefined;
 
-    const upstreamRes = await fetch(upstreamUrl, {
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), UPSTREAM_TIMEOUT_MS);
+    let upstreamRes;
+    try {
+      upstreamRes = await fetch(upstreamUrl, {
       method: req.method,
       headers: {
         'Content-Type': 'application/json',
@@ -117,7 +133,11 @@ export default async function handler(req, res) {
           : {}),
       },
       body,
-    });
+      signal: controller.signal,
+      });
+    } finally {
+      clearTimeout(timeout);
+    }
 
     const upstreamBody = await upstreamRes.text();
     res.setHeader(
