@@ -2,7 +2,7 @@
 
 ## Purpose
 
-This is the first production-core boundary for the Evidence-Driven Non-Autoregressive State Graph. It is executor-agnostic: Jev is an executor implementation, not the state authority.
+This is the production-core boundary for the Evidence-Driven Non-Autoregressive State Graph. It is executor-agnostic: Jev is an executor implementation, not the state authority.
 
 ## P0 — Authority
 
@@ -32,7 +32,7 @@ Durable objects/events carry:
 
 Protocol objects are versioned under `EDNARSG-PROTOCOL-1.0`. Existing Jev contract primitives remain under `EDNARSG-1.0` for compatibility.
 
-## P1 — Event model
+## P2 — Durable event + state core
 
 The event core is append-only and hash-chained:
 
@@ -40,7 +40,17 @@ The event core is append-only and hash-chained:
 
 Every event receives a SHA-256 content hash. A reducer reconstructs state from events; direct state mutation is outside this core.
 
-The current implementation is an **in-process reference core**. It does not claim durable database persistence yet. A durable adapter must preserve the same append-only and replay invariants.
+The durable boundary is PostgreSQL-backed in `backend/ed-narsg/postgres-store.mjs`, using:
+
+- append-only events;
+- aggregate+sequence uniqueness;
+- previous-hash chaining;
+- state projections;
+- transaction rollback;
+- projection aggregate ownership checks;
+- idempotency keys.
+
+This boundary was exercised against PostgreSQL 17 in completed HyperAI CI run `#210` at the then-verified branch head `5fdaeb8f955c1b0ed1fae5b3a5ec2c89d9ac3692`: 7/7 durability integration tests passed.
 
 ## P1 — State model
 
@@ -62,11 +72,44 @@ A `COMMITTED` task state requires:
 3. known mutation state;
 4. State Authority execution of the commit.
 
-## Current status
+## P3 — Execution and verification boundaries
 
-The authority, protocol, event-chain, replay, and state-commit guard primitives are implemented and tested.
+Jev is wrapped by an explicit execution boundary and worker attestation:
 
-They are **not** sufficient for production deployment. Remaining gates include durable persistence, policy service, dependency scheduler/resource locking, live executor attestation, independent verifier, crash recovery across restarts, security/chaos/load testing, shadow/canary, and verified upstream configuration.
+- `backend/ed-narsg/jev-executor-adapter.mjs`
+- `backend/ed-narsg/jev-worker-client.mjs`
+- `backend/ed-narsg/jev-worker-attestation.mjs`
+- `jev-worker/server.py`
+
+Jev DONE/BLOCKED is treated as executor output, not business-state proof. Independent verification is implemented in `backend/ed-narsg/independent-verifier.mjs`.
+
+Completed CI run `#210` recorded:
+
+- 42 passing E-D NARSG contract tests;
+- 1 intentionally skipped PostgreSQL integration test in the unit lane (the real integration runs separately and passed 7/7);
+- Python syntax validation for `jev-worker/server.py`;
+- runtime dependency audit: 0 vulnerabilities.
+
+## Current gates
+
+The production evidence gate still blocks promotion for evidence that is external to source/CI:
+
+- `UPSTREAM_NOT_VERIFIED`
+- `JEV_WORKER_NOT_VERIFIED`
+- `CREDENTIAL_ROTATION_REQUIRED`
+
+These are missing live/provenance evidence, not failures of the local contract suite.
+
+## What remains before the broader production target
+
+- dependency DAG compiler + resource scheduler;
+- policy/authorization service beyond the current authority matrix;
+- full object identity/evidence/reconciliation stores;
+- durable run orchestration and process-level crash recovery;
+- independently reachable Jev worker attestation plus real execution evidence;
+- security/chaos/load suites for the broader runtime;
+- shadow/canary promotion path;
+- independently verified HyperAI upstream configuration.
 
 Acceptance remains:
 
