@@ -192,22 +192,32 @@ function spawnDetached(command, args, env) {
 }
 
 async function runBuild(env) {
+  const npmCommand = process.platform === "win32" ? "npm.cmd" : "npm";
+
   await new Promise((resolve, reject) => {
-    const build = spawn("cmd.exe", ["/c", "npm run ci:build:isolated"], {
+    const build = spawn(npmCommand, ["run", "ci:build:isolated"], {
       cwd: projectRoot,
       env: { ...process.env, ...env },
       stdio: "inherit",
       windowsHide: true,
+      shell: false,
     });
 
-    build.on("exit", (code) => {
+    build.once("error", reject);
+    build.once("exit", (code, signal) => {
       if (code === 0) {
         resolve();
         return;
       }
-      reject(new Error(`ci:build:isolated exited with code ${code}`));
+
+      reject(
+        new Error(
+          `ci:build:isolated failed with code ${code ?? "null"}${
+            signal ? ` (signal ${signal})` : ""
+          }`,
+        ),
+      );
     });
-    build.on("error", reject);
   });
 }
 
