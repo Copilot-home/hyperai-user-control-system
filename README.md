@@ -4,7 +4,7 @@ The HyperAI User Control System is the orchestrator for the autonomy dashboards.
 
 ## Runtime truth
 
-- Product surface: `C:\Users\pc\HyperAI_Phoenix_Master\hyperai-user-control-system`
+- Product surface: `<repository-root>`
 - Frontend entry: `src/main.tsx`
 - App root: `src/App.tsx`
 - CI/runtime backend path: `backend/server.js` (listens on port `5000`)
@@ -56,7 +56,7 @@ When these flags are `true`, the corresponding lane is released from fallback mo
 
 ## Running locally
 
-1. `npm install`
+1. `npm ci`
 2. `python tools/hyperai_autonomous_cycle.py`
 3. Probe port `5000` before restarting the backend; capture the owning PID and timestamps.
 4. `npm run ci:build`
