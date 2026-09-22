@@ -5,6 +5,7 @@ on:
     branches:
       - main
       - audit/2026-09-21-runtime-proxy-repair
+      - audit/2026-09-22-runtime-hardening
   pull_request:
     branches:
       - main
@@ -61,7 +62,9 @@ jobs:
         run: npm ci --no-audit --no-fund
 
       - name: Build production artifact
-        run: npm run ci:build  browser-agent-smoke:
+        run: npm run ci:build
+
+  browser-agent-smoke:
     runs-on: ubuntu-latest
     timeout-minutes: 20
     needs: build-artifact
@@ -81,6 +84,9 @@ jobs:
 
       - name: Install dependencies
         run: npm ci --no-audit --no-fund
+
+      - name: Build production artifact
+        run: npm run ci:build
 
       - name: Install Playwright
         run: npx playwright install --with-deps chromium
