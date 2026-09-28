@@ -26,7 +26,8 @@
     "format": "prettier --write .",
     "test:ed-narsg": "node --test tests/ed-narsg/*.test.mjs",
     "ci:jev-worker-attestation": "node scripts/ci/jev-worker-attestation.mjs",
-    "ci:production-evidence-gate": "node scripts/ci/production-evidence-gate.mjs"
+    "ci:production-evidence-gate": "node scripts/ci/production-evidence-gate.mjs",
+    "test:agent-runtime": "node --test backend/agent-runtime/mission-contract.test.mjs backend/agent-runtime/function-bank.test.mjs"
   },
   "dependencies": {
     "axios": "^1.20.0",

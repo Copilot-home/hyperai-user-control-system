@@ -19,6 +19,26 @@ permissions:
   contents: read
 
 jobs:
+  agent-runtime-contract:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout
+        run: |
+          git clone "https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}.git" .
+          git fetch --no-tags origin "${{ github.ref }}"
+          git checkout --detach FETCH_HEAD
+
+      - name: Set up Node.js
+        run: |
+          curl -fsSL https://deb.nodesource.com/setup_20.x | sudo bash -
+          sudo apt-get install -y nodejs
+          node --version
+          npm --version
+
+      - name: Run HOTL agent runtime contract tests
+        run: npm run test:agent-runtime
+
   docker-surface-audit:
     runs-on: ubuntu-latest
     timeout-minutes: 10
