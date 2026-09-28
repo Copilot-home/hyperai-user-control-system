@@ -45,7 +45,24 @@ async function executeLockedMission(mission, deps) {
     if (!task) break;
 
     mission.state = "SELECTING";
-    const capability = await deps.selectCapability(task, mission);
+    const capability =
+      typeof deps.functionBank?.select === "function"
+        ? deps.functionBank.select(task, mission)
+        : await deps.selectCapability(task, mission);
+
+    if (capability && typeof deps.functionBank?.discover === "function") {
+      const discovered = deps.functionBank.discover(task, mission);
+      if (!discovered.some((candidate) => candidate.id === capability.id)) {
+        task.state = "BLOCKED";
+        mission.state = "BLOCKED";
+        appendBlocker(mission, {
+          task_id: task.task_id,
+          cause: "FUNCTION_NOT_DISCOVERED",
+          exact_cause: `SELECTED_FUNCTION_NOT_REGISTERED: ${capability.id}`
+        });
+        return mission;
+      }
+    }
 
     if (!capability) {
       let alternative = null;
