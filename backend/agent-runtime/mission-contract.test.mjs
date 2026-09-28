@@ -167,3 +167,45 @@ test("seal rejects unverified final state", () =>
     )
   )
 );
+
+test("mission runner uses the Function Bank for discovery and execution", async () => {
+  const calls = [];
+  const bank = {
+    select: () => { calls.push("select"); return { id: "bank.fn", capability: "test" }; },
+    discover: () => { calls.push("discover"); return [{ id: "bank.fn", capability: "test" }]; },
+    execute: async () => { calls.push("execute"); return { ok: true, receipt: { function_id: "bank.fn", status: "EXECUTED" } }; }
+  };
+  const r = await runMission(base, {
+    ...successfulDeps(),
+    functionBank: bank,
+    selectCapability: async () => { throw new Error("selectCapability must not be used"); },
+    execute: async () => { throw new Error("execute must not be used"); }
+  });
+  assert.equal(r.state, "MISSION_PASS");
+  assert.deepEqual(calls, ["select", "discover", "execute"]);
+});
+
+test("mission blocks when Function Bank selection is not registered", async () => {
+  const r = await runMission(base, {
+    ...successfulDeps(),
+    functionBank: {
+      select: () => ({ id: "ghost.fn", capability: "test" }),
+      discover: () => []
+    }
+  });
+  assert.equal(r.state, "BLOCKED");
+  assert.equal(r.unresolved_blockers[0].cause, "FUNCTION_NOT_DISCOVERED");
+});
+
+test("mission blocks when selected function returns no receipt", async () => {
+  const r = await runMission(base, {
+    ...successfulDeps(),
+    functionBank: {
+      select: () => ({ id: "bank.fn", capability: "test" }),
+      discover: () => [{ id: "bank.fn", capability: "test" }],
+      execute: async () => ({ ok: true })
+    }
+  });
+  assert.equal(r.state, "BLOCKED");
+  assert.equal(r.unresolved_blockers[0].cause, "NO_EXECUTION_RECEIPT");
+});
