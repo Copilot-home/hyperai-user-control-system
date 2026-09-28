@@ -79,6 +79,23 @@ test("full lifecycle executes discovery, planning, census and verification", asy
   ]);
 });
 
+test("readback transient failure enters repair/retry instead of ending the mission", async () => {
+  let observations = 0;
+  const r = await runMission(base, successfulDeps({
+    observe: async () => {
+      observations += 1;
+      if (observations === 1) {
+        const error = new Error("temporary readback outage");
+        error.classification = "transient";
+        throw error;
+      }
+      return { readback: { actual: true } };
+    }
+  }));
+  assert.equal(r.state, "MISSION_PASS");
+  assert.equal(observations, 2);
+});
+
 test("repair then continue", async () => {
   let n = 0;
   const r = await runMission(base, successfulDeps({
