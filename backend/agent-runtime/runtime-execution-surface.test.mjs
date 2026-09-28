@@ -27,7 +27,7 @@ test("runtime surface is built from actual registered HTTP execution functions",
   assert.equal(execution.result.status,200);
   assert.deepEqual(observation.readback.payload.connectors,[]);
   assert.equal(observation.success_criteria_met,true);
-  s.close();
+  await new Promise((resolve) => s.close(resolve));
 });
 
 test("capability census contains only registered executable functions", () => {
