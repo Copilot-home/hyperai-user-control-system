@@ -55,6 +55,7 @@ async function executeLockedMission(mission, deps) {
         });
       }
       if (alternative) {
+        task.alternative_capability = alternative;
         mission.alternatives = [...(mission.alternatives ?? []), alternative];
         mission.state = "RETRYING";
         continue;
