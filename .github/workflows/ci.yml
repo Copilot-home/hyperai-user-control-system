@@ -6,6 +6,7 @@ on:
       - main
       - audit/2026-09-21-runtime-proxy-repair
       - audit/2026-09-22-runtime-hardening
+      - hotl-agent-runtime-v2
   pull_request:
     branches:
       - main
