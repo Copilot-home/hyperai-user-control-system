@@ -103,7 +103,7 @@ test("repair then continue", async () => {
       n++;
       return task.attempts === 1
         ? { error: { classification: "transient" } }
-        : { receipt: { id: "r" } };
+        : { receipt: { id: "r", status: "EXECUTED" } };
     }
   }));
   assert.equal(r.state, "MISSION_PASS");
