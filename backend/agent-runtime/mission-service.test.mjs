@@ -35,5 +35,6 @@ test("agent mission executes queue through registered runtime function and seals
   assert.equal(mission.queue[0].state,"PASS");
   assert.equal(mission.evidence_chain_sealed,true);
   assert.equal(getAgentMission(id).final_readback.state_matches_reality,true);
+  s.closeAllConnections?.();
   await new Promise((resolve) => s.close(resolve));
 });
