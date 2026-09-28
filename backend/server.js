@@ -1976,12 +1976,12 @@ const persistAutonomyPolicyManifest = (capabilities) => {
             backend: {
                 url: capabilities.selected_action === 'reuse_managed_runtime'
                     ? (capabilities.runtime_authority?.managed_backend_url || null)
-                    : 'http://127.0.0.1:5000',
+                    : `http://127.0.0.1:${PORT}`,
                 port: capabilities.selected_action === 'reuse_managed_runtime'
                     ? (capabilities.runtime_recovery?.managedRuntime?.backendUrl
                         ? Number(new URL(capabilities.runtime_recovery.managedRuntime.backendUrl).port || 80)
                         : undefined)
-                    : 5000,
+                    : PORT,
             },
             frontend: {
                 url: capabilities.selected_action === 'reuse_managed_runtime'
@@ -2182,7 +2182,7 @@ const buildRuntimeCapabilities = async () => {
         decision_count: autonomyStatus.decisionCount || 0,
         last_command: autonomyStatus.lastAction,
         backend_classification: backendClassification,
-        frontend_classification: currentDefaultBoundaryHealthy ? 'preview-alive' : authority.frontendClassification,
+        frontend_classification: frontendPreview.ok ? 'preview-alive' : authority.frontendClassification,
         selected_action: currentDefaultBoundaryHealthy ? 'reuse_default_runtime' : (recovery.selectedAction || authority.selectedAction),
         state_transition: authority.stateTransition,
         authority_reason: currentDefaultBoundaryHealthy
@@ -2208,8 +2208,8 @@ const buildRuntimeCapabilities = async () => {
             managed_runtime: currentDefaultBoundaryHealthy ? false : Boolean(recovery.managedRuntime?.managed || manifest.managed),
             managed_backend_url: currentDefaultBoundaryHealthy ? null : (recovery.managedRuntime?.backendUrl || manifest.backendUrl || null),
             managed_frontend_url: currentDefaultBoundaryHealthy ? null : (recovery.managedRuntime?.frontendUrl || manifest.frontendUrl || null),
-            operator_attention_required: currentDefaultBoundaryHealthy ? false : authority.operatorAttentionRequired,
-            managed_runtime_health: currentDefaultBoundaryHealthy ? 'not-required' : authority.managedRuntimeHealth,
+            operator_attention_required: currentDefaultBoundaryHealthy || selfManagedRoutineControl ? false : authority.operatorAttentionRequired,
+            managed_runtime_health: currentDefaultBoundaryHealthy || selfManagedRoutineControl ? 'not-required' : authority.managedRuntimeHealth,
             summary: staleProcess
                 ? 'The live backend listener predates the current backend/server.js timestamp. Treat this runtime as stale until it is restarted or re-proven.'
                 : 'The live backend listener is aligned with the current backend/server.js timestamp.',
