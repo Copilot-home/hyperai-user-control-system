@@ -45,10 +45,10 @@ async function executeLockedMission(mission, deps) {
     if (!task) break;
 
     mission.state = "SELECTING";
-    const capability = task.alternative_capability
-      ?? (typeof deps.functionBank?.select === "function"
+    const capability =
+      typeof deps.functionBank?.select === "function"
         ? deps.functionBank.select(task, mission)
-        : await deps.selectCapability(task, mission));
+        : await deps.selectCapability(task, mission);
 
     if (capability && typeof deps.functionBank?.discover === "function") {
       const discovered = deps.functionBank.discover(task, mission);
@@ -138,7 +138,7 @@ async function executeLockedMission(mission, deps) {
           ? await deps.functionBank.execute(selectedConnector, task, mission)
           : await deps.execute(task, selectedConnector, mission);
 
-      if (!execution?.receipt) {
+      if (!execution?.receipt && !execution?.error) {
         task.state = "BLOCKED";
         mission.state = "BLOCKED";
         appendBlocker(mission, {
