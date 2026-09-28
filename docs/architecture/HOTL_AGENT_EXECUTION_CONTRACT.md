@@ -34,3 +34,22 @@ END_MISSION = QUEUE_EMPTY AND OBJECTIVES_VERIFIED AND STATE_MATCHES_REALITY AND 
 
 ## Compatibility
 Existing backend/server.js, X-Hub events, autonomy policy and production evidence gates remain authoritative for their existing surfaces. This contract is additive and does not reinterpret payment_received as settlement.
+
+
+## State machine
+INIT -> MISSION_LOCKED -> DISCOVERING -> PLANNING -> SELECTING -> AUTHORIZING -> EXECUTING -> OBSERVING -> VERIFYING.
+
+PASS -> CONTINUE_QUEUE -> NEXT_TASK.
+
+FAIL -> DIAGNOSING -> REPAIRING -> RETRYING -> VERIFYING.
+
+Capability failure may invoke alternative capability discovery before retry. Authorization or policy/scope boundaries transition to PAUSED_FOR_HUMAN.
+
+## Human resume
+PAUSED_FOR_HUMAN is not mission completion. An explicit APPROVED or MODIFIED decision resumes the same mission and queue. REJECTED is an explicit human terminal decision.
+
+## Function execution
+The Function Bank is the execution substrate. Functions must be registered before discovery/selection and every execution produces a receipt. Capability availability is not execution proof.
+
+## Terminal proof
+A mission is terminal PASS only after FINAL_READBACK and EVIDENCE_SEAL. A tool/API success response alone is insufficient.
