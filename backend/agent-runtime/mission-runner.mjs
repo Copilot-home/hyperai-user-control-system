@@ -116,14 +116,37 @@ async function executeLockedMission(mission, deps) {
       task.attempts = (task.attempts ?? 0) + 1;
       mission.state = "EXECUTING";
 
-      const execution = await deps.execute(
-        task,
-        selectedConnector,
-        mission
-      );
+      let execution;
+      try {
+        execution = await deps.execute(
+          task,
+          selectedConnector,
+          mission
+        );
+      } catch (error) {
+        execution = {
+          ok: false,
+          error: {
+            message: error instanceof Error ? error.message : String(error),
+            classification: error?.classification ?? "unknown",
+          },
+          receipt: null,
+        };
+      }
 
       mission.state = "OBSERVING";
-      const observation = await deps.observe(task, execution, mission);
+      let observation;
+      try {
+        observation = await deps.observe(task, execution, mission);
+      } catch (error) {
+        observation = {
+          readback: null,
+          error: {
+            message: error instanceof Error ? error.message : String(error),
+            classification: error?.classification ?? "unknown",
+          },
+        };
+      }
 
       mission.state = "VERIFYING";
       const verification = verifyTaskEvidence(task, {
@@ -220,7 +243,18 @@ async function executeLockedMission(mission, deps) {
   }
 
   mission.state = "FINAL_READBACK";
-  const finalReadback = await deps.finalReadback(mission);
+  let finalReadback;
+  try {
+    finalReadback = await deps.finalReadback(mission);
+  } catch (error) {
+    mission.state = "BLOCKED";
+    appendBlocker(mission, {
+      cause: "FINAL_READBACK_FAILED",
+      exact_cause: error instanceof Error ? error.message : String(error),
+      classification: error?.classification ?? "unknown",
+    });
+    return mission;
+  }
 
   mission.objectives_verified = finalReadback?.objectives_verified === true;
   mission.state_matches_reality =
