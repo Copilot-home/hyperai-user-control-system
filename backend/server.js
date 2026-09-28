@@ -17,6 +17,7 @@ const cors = require('cors');
 const autonomyRuntime = require('./services/autonomyRuntime');
 const { buildRuntimeAuthority, classifyLane } = require('./services/runtimeAuthority');
 const runtimeManager = require('./services/runtimeManager');
+const getAgentMissionRuntime = () => import('./agent-runtime/mission-service.mjs');
 
 const app = express();
 app.use(cors());
@@ -2391,6 +2392,61 @@ app.get('/api/workspace/missions/:id', async (req, res) => {
         return;
     }
     res.json(mission);
+});
+
+app.get('/api/agent/missions', async (req, res) => {
+    const runtime = await getAgentMissionRuntime();
+    res.json({
+        generated_at: new Date().toISOString(),
+        missions: runtime.listAgentMissions(),
+    });
+});
+
+app.get('/api/agent/missions/:id', async (req, res) => {
+    const runtime = await getAgentMissionRuntime();
+    const mission = runtime.getAgentMission(req.params.id);
+    if (!mission) {
+        res.status(404).json({
+            status: 'missing',
+            mission_id: req.params.id,
+            detail: 'Agent mission was not found in the active mission runtime.',
+        });
+        return;
+    }
+    res.json(mission);
+});
+
+app.post('/api/agent/missions', async (req, res) => {
+    try {
+        const runtime = await getAgentMissionRuntime();
+        const mission = await runtime.startAgentMission(req.body || {}, {
+            baseUrl: process.env.HYPERAI_RUNTIME_BASE_URL || 'http://127.0.0.1:5000',
+        });
+        res.status(201).json(mission);
+    } catch (error) {
+        const classification = error?.classification || 'configuration';
+        const status = classification === 'authorization' ? 403 : classification === 'transient' ? 503 : 400;
+        res.status(status).json({
+            status: 'blocked',
+            classification,
+            exact_cause: error instanceof Error ? error.message : String(error),
+        });
+    }
+});
+
+app.post('/api/agent/missions/:id/human-decision', async (req, res) => {
+    try {
+        const runtime = await getAgentMissionRuntime();
+        const mission = await runtime.resumeAgentMission(req.params.id, req.body || {}, {
+            baseUrl: process.env.HYPERAI_RUNTIME_BASE_URL || 'http://127.0.0.1:5000',
+        });
+        res.json(mission);
+    } catch (error) {
+        res.status(400).json({
+            status: 'blocked',
+            exact_cause: error instanceof Error ? error.message : String(error),
+        });
+    }
 });
 
 app.post('/api/workspace/chat/route', async (req, res) => {
