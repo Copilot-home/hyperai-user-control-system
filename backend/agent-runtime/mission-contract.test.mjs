@@ -27,7 +27,7 @@ function successfulDeps(overrides = {}) {
     capabilityCensus: async () => ({ executable: ["test.fn"] }),
     selectCapability: async () => ({ id: "test.fn" }),
     authorize: async () => ({ allowed: true }),
-    execute: async (task) => ({ receipt: { id: `r-${task.attempts}` } }),
+    execute: async (task) => ({ receipt: { id: `r-${task.attempts}`, status: "EXECUTED" } }),
     observe: async () => ({ readback: { actual: true } }),
     successCriteria: () => true,
     repair: async () => ({ status: "REPAIRED" }),
@@ -45,6 +45,17 @@ test("locks mission", () => assert.equal(lockMission(base).state, "LOCKED"));
 test("no receipt is not verified", () =>
   assert.equal(verifyTaskEvidence({}, {}).status, "NOT_VERIFIED"));
 
+test("error receipt is not verified", () =>
+  assert.equal(
+    verifyTaskEvidence({}, {
+      execution_receipt: { status: "ERROR" },
+      readback: { actual: true },
+      success_criteria_met: true
+    }).reason,
+    "EXECUTION_NOT_CONFIRMED"
+  )
+);
+
 test("full lifecycle executes discovery, planning, census and verification", async () => {
   const seen = [];
   const r = await runMission(base, successfulDeps({
@@ -53,7 +64,7 @@ test("full lifecycle executes discovery, planning, census and verification", asy
     capabilityCensus: async () => { seen.push("census"); return {}; },
     selectCapability: async () => { seen.push("select"); return { id: "fn" }; },
     authorize: async () => { seen.push("authorize"); return { allowed: true }; },
-    execute: async () => { seen.push("execute"); return { receipt: { id: "r" } }; },
+    execute: async () => { seen.push("execute"); return { receipt: { id: "r", status: "EXECUTED" } }; },
     observe: async () => { seen.push("observe"); return { readback: { actual: true } }; },
     finalReadback: async () => { seen.push("final-readback"); return {
       objectives_verified: true,
@@ -68,6 +79,23 @@ test("full lifecycle executes discovery, planning, census and verification", asy
   ]);
 });
 
+test("readback transient failure enters repair/retry instead of ending the mission", async () => {
+  let observations = 0;
+  const r = await runMission(base, successfulDeps({
+    observe: async () => {
+      observations += 1;
+      if (observations === 1) {
+        const error = new Error("temporary readback outage");
+        error.classification = "transient";
+        throw error;
+      }
+      return { readback: { actual: true } };
+    }
+  }));
+  assert.equal(r.state, "MISSION_PASS");
+  assert.equal(observations, 2);
+});
+
 test("repair then continue", async () => {
   let n = 0;
   const r = await runMission(base, successfulDeps({
@@ -75,7 +103,7 @@ test("repair then continue", async () => {
       n++;
       return task.attempts === 1
         ? { error: { classification: "transient" } }
-        : { receipt: { id: "r" } };
+        : { receipt: { id: "r", status: "EXECUTED" } };
     }
   }));
   assert.equal(r.state, "MISSION_PASS");

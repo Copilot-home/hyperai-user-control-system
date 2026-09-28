@@ -530,6 +530,10 @@ class AutonomyRuntime {
 
     start() {
         if (this.state.active) {
+            // Persisted state may restore `active=true` before the server has
+            // rebuilt the in-memory scheduler handle. Re-attach the loop here
+            // so persisted autonomous state cannot become a false-positive.
+            this.ensureLoop();
             return this.getStatus();
         }
         this.state.active = true;
