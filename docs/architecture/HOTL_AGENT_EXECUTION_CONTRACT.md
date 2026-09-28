@@ -53,3 +53,22 @@ The Function Bank is the execution substrate. Functions must be registered befor
 
 ## Terminal proof
 A mission is terminal PASS only after FINAL_READBACK and EVIDENCE_SEAL. A tool/API success response alone is insufficient.
+
+
+## Function Bank binding invariant
+
+Mission execution MUST bind capability selection and execution to the Function Bank when one is supplied.
+
+```
+DISCOVER
+  -> FUNCTION BANK
+  -> SELECT REGISTERED FUNCTION
+  -> EXECUTE REGISTERED FUNCTION
+  -> EXECUTION RECEIPT
+  -> READBACK
+  -> VERIFY
+```
+
+A selected function that is not discoverable from the Function Bank is a blocking state. An execution result without a receipt is not verified and blocks mission completion.
+
+Connector, Skill, and Plugin adapters therefore sit above the Function Bank as providers of registered executable functions; their availability alone is never execution proof.
