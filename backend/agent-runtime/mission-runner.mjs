@@ -133,11 +133,21 @@ async function executeLockedMission(mission, deps) {
       task.attempts = (task.attempts ?? 0) + 1;
       mission.state = "EXECUTING";
 
-      const execution = await deps.execute(
-        task,
-        selectedConnector,
-        mission
-      );
+      const execution =
+        typeof deps.functionBank?.execute === "function"
+          ? await deps.functionBank.execute(selectedConnector, task, mission)
+          : await deps.execute(task, selectedConnector, mission);
+
+      if (!execution?.receipt) {
+        task.state = "BLOCKED";
+        mission.state = "BLOCKED";
+        appendBlocker(mission, {
+          task_id: task.task_id,
+          cause: "NO_EXECUTION_RECEIPT",
+          exact_cause: "FUNCTION_EXECUTION_DID_NOT_RETURN_RECEIPT"
+        });
+        return mission;
+      }
 
       mission.state = "OBSERVING";
       const observation = await deps.observe(task, execution, mission);
