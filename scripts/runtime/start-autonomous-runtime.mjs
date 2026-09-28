@@ -210,7 +210,7 @@ async function runBuild(env) {
       env: { ...process.env, ...env },
       stdio: "inherit",
       windowsHide: true,
-      shell: false,
+      shell: process.platform === "win32",
     });
 
     build.once("error", reject);
