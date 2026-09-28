@@ -45,6 +45,17 @@ test("locks mission", () => assert.equal(lockMission(base).state, "LOCKED"));
 test("no receipt is not verified", () =>
   assert.equal(verifyTaskEvidence({}, {}).status, "NOT_VERIFIED"));
 
+test("error receipt is not verified", () =>
+  assert.equal(
+    verifyTaskEvidence({}, {
+      execution_receipt: { status: "ERROR" },
+      readback: { actual: true },
+      success_criteria_met: true
+    }).reason,
+    "EXECUTION_NOT_CONFIRMED"
+  )
+);
+
 test("full lifecycle executes discovery, planning, census and verification", async () => {
   const seen = [];
   const r = await runMission(base, successfulDeps({
