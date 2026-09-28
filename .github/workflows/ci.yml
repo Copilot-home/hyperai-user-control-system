@@ -26,7 +26,11 @@ jobs:
       - name: Checkout
         run: |
           git clone "https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}.git" .
-          git fetch --no-tags origin "${{ github.ref }}"
+          if [ -n "${GITHUB_HEAD_REF}" ]; then
+            git fetch --no-tags origin "refs/heads/${GITHUB_HEAD_REF}"
+          else
+            git fetch --no-tags origin "${GITHUB_REF}"
+          fi
           git checkout --detach FETCH_HEAD
 
       - name: Set up Node.js
@@ -46,7 +50,11 @@ jobs:
       - name: Checkout
         run: |
           git clone "https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}.git" .
-          git fetch --no-tags origin "${{ github.ref }}"
+          if [ -n "${GITHUB_HEAD_REF}" ]; then
+            git fetch --no-tags origin "refs/heads/${GITHUB_HEAD_REF}"
+          else
+            git fetch --no-tags origin "${GITHUB_REF}"
+          fi
           git checkout --detach FETCH_HEAD
 
       - name: Validate Docker surface
@@ -59,7 +67,11 @@ jobs:
       - name: Checkout
         run: |
           git clone "https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}.git" .
-          git fetch --no-tags origin "${{ github.ref }}"
+          if [ -n "${GITHUB_HEAD_REF}" ]; then
+            git fetch --no-tags origin "refs/heads/${GITHUB_HEAD_REF}"
+          else
+            git fetch --no-tags origin "${GITHUB_REF}"
+          fi
           git checkout --detach FETCH_HEAD
 
       - name: Set up Node.js and Python
@@ -92,7 +104,11 @@ jobs:
       - name: Checkout
         run: |
           git clone "https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}.git" .
-          git fetch --no-tags origin "${{ github.ref }}"
+          if [ -n "${GITHUB_HEAD_REF}" ]; then
+            git fetch --no-tags origin "refs/heads/${GITHUB_HEAD_REF}"
+          else
+            git fetch --no-tags origin "${GITHUB_REF}"
+          fi
           git checkout --detach FETCH_HEAD
 
       - name: Set up Node.js
@@ -138,7 +154,11 @@ jobs:
       - name: Checkout
         run: |
           git clone "https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}.git" .
-          git fetch --no-tags origin "${{ github.ref }}"
+          if [ -n "${GITHUB_HEAD_REF}" ]; then
+            git fetch --no-tags origin "refs/heads/${GITHUB_HEAD_REF}"
+          else
+            git fetch --no-tags origin "${GITHUB_REF}"
+          fi
           git checkout --detach FETCH_HEAD
 
       - name: Set up Node.js
@@ -172,7 +192,11 @@ jobs:
       - name: Checkout
         run: |
           git clone "https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}.git" .
-          git fetch --no-tags origin "${{ github.ref }}"
+          if [ -n "${GITHUB_HEAD_REF}" ]; then
+            git fetch --no-tags origin "refs/heads/${GITHUB_HEAD_REF}"
+          else
+            git fetch --no-tags origin "${GITHUB_REF}"
+          fi
           git checkout --detach FETCH_HEAD
 
       - name: Set up Node.js
@@ -195,7 +219,11 @@ jobs:
       - name: Checkout
         run: |
           git clone "https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}.git" .
-          git fetch --no-tags origin "${{ github.ref }}"
+          if [ -n "${GITHUB_HEAD_REF}" ]; then
+            git fetch --no-tags origin "refs/heads/${GITHUB_HEAD_REF}"
+          else
+            git fetch --no-tags origin "${GITHUB_REF}"
+          fi
           git checkout --detach FETCH_HEAD
 
       - name: Set up Node.js
@@ -237,7 +265,11 @@ jobs:
       - name: Checkout
         run: |
           git clone "https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}.git" .
-          git fetch --no-tags origin "${{ github.ref }}"
+          if [ -n "${GITHUB_HEAD_REF}" ]; then
+            git fetch --no-tags origin "refs/heads/${GITHUB_HEAD_REF}"
+          else
+            git fetch --no-tags origin "${GITHUB_REF}"
+          fi
           git checkout --detach FETCH_HEAD
       - name: Set up Node.js
         run: |
