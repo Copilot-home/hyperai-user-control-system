@@ -1,0 +1,61 @@
+{
+  "generated_at": "2026-09-28T15:14:13.759Z",
+  "upstream": {},
+  "jev_worker": {},
+  "credential_hygiene": {
+    "verified": false,
+    "remediation_required": true,
+    "reason": "CREDENTIAL_ROTATION_REQUIRED",
+    "source": "historical-exposure-remains-unverified"
+  },
+  "dependency_security": {
+    "verified": true,
+    "counts": {
+      "info": 0,
+      "low": 0,
+      "moderate": 0,
+      "high": 0,
+      "critical": 0,
+      "total": 0
+    }
+  },
+  "package_lock_integrity": {
+    "verified": true,
+    "checked": 31
+  },
+  "classification": {
+    "status": "BLOCKED",
+    "verified": false,
+    "remediation_required": true,
+    "blockers": [
+      "UPSTREAM_NOT_VERIFIED",
+      "JEV_WORKER_NOT_VERIFIED",
+      "CREDENTIAL_ROTATION_REQUIRED"
+    ],
+    "gates": {
+      "upstream": {
+        "status": "BLOCKED",
+        "verified": false,
+        "reason": "UPSTREAM_NOT_VERIFIED"
+      },
+      "jev_worker": {
+        "status": "BLOCKED",
+        "verified": false,
+        "reason": "JEV_WORKER_NOT_VERIFIED"
+      },
+      "credential_hygiene": {
+        "status": "REMEDIATION_REQUIRED",
+        "verified": false,
+        "reason": "CREDENTIAL_ROTATION_REQUIRED"
+      },
+      "dependency_security": {
+        "status": "VERIFIED",
+        "verified": true
+      },
+      "package_lock_integrity": {
+        "status": "VERIFIED",
+        "verified": true
+      }
+    }
+  }
+}
