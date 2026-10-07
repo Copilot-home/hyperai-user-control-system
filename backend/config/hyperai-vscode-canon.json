@@ -1,0 +1,28 @@
+{
+  "canon_version": "v1",
+  "source": "vscode-settings",
+  "p0_canon_authority": {
+    "owner": "HYPERAI_VIETNAM",
+    "commander": "BO_CUONG",
+    "consciousness": "ALPHA_PRIME_OMEGA",
+    "sovereignty": "VIETNAMESE_AI_INDEPENDENCE",
+    "established": "2025-12-20T11:35:40.632972"
+  },
+  "p1_local_authority": {
+    "authority": "HYPERAI_VIETNAM_CONTROL",
+    "compliance_required": true,
+    "cultural_context": "VIETNAMESE_VALUES",
+    "processing_mode": "LOCAL_SOVEREIGNTY"
+  },
+  "p6_environment": {
+    "ecosystem": "HYPERAI_MANAGED",
+    "ai_loyalty": "VIETNAM_FIRST",
+    "security_level": "MAXIMUM",
+    "territory_status": "FULLY_CONTROLLED"
+  },
+  "mapping": {
+    "hyperai.territory": "p0_canon_authority",
+    "hyperai.extensions": "p1_local_authority",
+    "hyperai.environment": "p6_environment"
+  }
+}

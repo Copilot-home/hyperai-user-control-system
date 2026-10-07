@@ -45,24 +45,7 @@ async function executeLockedMission(mission, deps) {
     if (!task) break;
 
     mission.state = "SELECTING";
-    const capability =
-      typeof deps.functionBank?.select === "function"
-        ? deps.functionBank.select(task, mission)
-        : await deps.selectCapability(task, mission);
-
-    if (capability && typeof deps.functionBank?.discover === "function") {
-      const discovered = deps.functionBank.discover(task, mission);
-      if (!discovered.some((candidate) => candidate.id === capability.id)) {
-        task.state = "BLOCKED";
-        mission.state = "BLOCKED";
-        appendBlocker(mission, {
-          task_id: task.task_id,
-          cause: "FUNCTION_NOT_DISCOVERED",
-          exact_cause: `SELECTED_FUNCTION_NOT_REGISTERED: ${capability.id}`
-        });
-        return mission;
-      }
-    }
+    const capability = await deps.selectCapability(task, mission);
 
     if (!capability) {
       let alternative = null;
@@ -133,21 +116,11 @@ async function executeLockedMission(mission, deps) {
       task.attempts = (task.attempts ?? 0) + 1;
       mission.state = "EXECUTING";
 
-      const execution =
-        typeof deps.functionBank?.execute === "function"
-          ? await deps.functionBank.execute(selectedConnector, task, mission)
-          : await deps.execute(task, selectedConnector, mission);
-
-      if (!execution?.receipt && !execution?.error) {
-        task.state = "BLOCKED";
-        mission.state = "BLOCKED";
-        appendBlocker(mission, {
-          task_id: task.task_id,
-          cause: "NO_EXECUTION_RECEIPT",
-          exact_cause: "FUNCTION_EXECUTION_DID_NOT_RETURN_RECEIPT"
-        });
-        return mission;
-      }
+      const execution = await deps.execute(
+        task,
+        selectedConnector,
+        mission
+      );
 
       mission.state = "OBSERVING";
       const observation = await deps.observe(task, execution, mission);

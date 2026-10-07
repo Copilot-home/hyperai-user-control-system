@@ -3,6 +3,7 @@ import { User, UserPreferences } from '../types/user.types';
 import { getCurrentUser, upsertCurrentUser } from '../services/api/userAPI';
 import { getUserPreferences, setUserPreferences } from '../services/storage/userPreferences';
 import { isUserRuntimeEnabled } from '../services/runtimeFlags';
+import { resolvePrincipal, resolveEffectiveCapabilities, validatePrincipalSession } from '../services/localAuthority';
 
 interface UserContextType {
     user: User | null;
@@ -10,6 +11,7 @@ interface UserContextType {
     updateUser: (user: User) => void;
     userPreferences: UserPreferences;
     updateUserPreferences: (preferences: Partial<UserPreferences>) => void;
+    capabilityFailures: Array<{ capability: string; reason: string }>;
 }
 
 const defaultPreferences: UserPreferences = {
@@ -23,6 +25,7 @@ export const UserContext = createContext<UserContextType | undefined>(undefined)
 export const UserProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
     const [user, setUser] = useState<User | null>(null);
     const [userPreferences, setUserPreferencesState] = useState<UserPreferences>(() => getUserPreferences() ?? defaultPreferences);
+    const [capabilityFailures, setCapabilityFailures] = useState<Array<{ capability: string; reason: string }>>([]);
 
     useEffect(() => {
         setUserPreferences(userPreferences);
@@ -31,22 +34,55 @@ export const UserProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     useEffect(() => {
         const loadUser = async () => {
             if (!isUserRuntimeEnabled) {
-                setUser({
-                    id: 'local-user',
-                    name: 'operator',
-                    email: '',
-                    preferences: userPreferences,
-                });
+                // runtime build does not include user implementation
+                setCapabilityFailures([{ capability: '*', reason: 'CAPABILITY_NOT_IMPLEMENTED' }]);
                 return;
             }
 
             try {
                 const runtimeUser = await getCurrentUser();
-                setUser(runtimeUser);
-                if (runtimeUser.preferences) {
-                    setUserPreferencesState(runtimeUser.preferences);
+                const principal = resolvePrincipal(runtimeUser);
+
+                if (!principal) {
+                    setCapabilityFailures([{ capability: '*', reason: 'UNKNOWN_PRINCIPAL' }]);
+                    setUser({
+                        id: 'unknown',
+                        name: 'unknown',
+                        email: '',
+                        preferences: userPreferences,
+                    });
+                    return;
                 }
+
+                const sessionValidation = validatePrincipalSession(principal, null);
+                if (!sessionValidation.valid) {
+                    setCapabilityFailures([{ capability: '*', reason: sessionValidation.failure ?? 'SESSION_INVALID' }]);
+                    setUser({
+                        id: principal.principal_id,
+                        name: principal.display_name,
+                        email: principal.email,
+                        preferences: userPreferences,
+                        principal,
+                    });
+                    return;
+                }
+
+                const resolved = await resolveEffectiveCapabilities(principal);
+                setCapabilityFailures(resolved.failures);
+
+                const boundUser: User = {
+                    id: principal.principal_id,
+                    name: principal.display_name,
+                    email: principal.email,
+                    preferences: runtimeUser.preferences ?? userPreferences,
+                    principal: resolved.principal,
+                    authority: resolved.authority,
+                    capabilities: resolved.capabilities,
+                };
+
+                setUser(boundUser);
             } catch (error) {
+                setCapabilityFailures([{ capability: '*', reason: 'SESSION_INVALID' }]);
                 setUser({
                     id: 'runtime-user-fallback',
                     name: 'operator',
@@ -59,35 +95,36 @@ export const UserProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         loadUser();
     }, []);
 
-    const updateUser = (nextUser: User) => {
-        setUser(nextUser);
-        if (typeof nextUser.preferences === 'object' && nextUser.preferences !== null) {
-            setUserPreferencesState(nextUser.preferences);
+    const updateUser = async (updated: User) => {
+        if (!isUserRuntimeEnabled || !user) {
+            setUser(updated);
+            return;
         }
-
-        if (isUserRuntimeEnabled) {
-            void upsertCurrentUser(nextUser).catch(() => undefined);
+        try {
+            const saved = await upsertCurrentUser(updated);
+            const principal = resolvePrincipal(saved);
+            if (principal) {
+                const resolved = await resolveEffectiveCapabilities(principal);
+                setCapabilityFailures(resolved.failures);
+                setUser({ ...saved, principal: resolved.principal, authority: resolved.authority, capabilities: resolved.capabilities });
+            } else {
+                setUser(saved);
+            }
+        } catch {
+            setUser(updated);
         }
     };
 
     const updateUserPreferences = (preferences: Partial<UserPreferences>) => {
         setUserPreferencesState((prev) => {
-            const nextPreferences = { ...prev, ...preferences };
-            if (user) {
-                const nextUser = { ...user, preferences: nextPreferences };
-                setUser(nextUser);
-                if (isUserRuntimeEnabled) {
-                    void upsertCurrentUser(nextUser).catch(() => undefined);
-                }
-            }
-            return nextPreferences;
+            const next = { ...prev, ...preferences };
+            setUserPreferences(next);
+            return next;
         });
     };
 
     return (
-        <UserContext.Provider
-            value={{ user, setUser, updateUser, userPreferences, updateUserPreferences }}
-        >
+        <UserContext.Provider value={{ user, setUser, updateUser, userPreferences, updateUserPreferences, capabilityFailures }}>
             {children}
         </UserContext.Provider>
     );
@@ -95,7 +132,7 @@ export const UserProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
 export const useUser = (): UserContextType => {
     const context = useContext(UserContext);
-    if (context === undefined) {
+    if (!context) {
         throw new Error('useUser must be used within a UserProvider');
     }
     return context;

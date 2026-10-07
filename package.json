@@ -27,7 +27,7 @@
     "test:ed-narsg": "node --test tests/ed-narsg/*.test.mjs",
     "ci:jev-worker-attestation": "node scripts/ci/jev-worker-attestation.mjs",
     "ci:production-evidence-gate": "node scripts/ci/production-evidence-gate.mjs",
-    "test:agent-runtime": "node --test backend/agent-runtime/mission-contract.test.mjs backend/agent-runtime/function-bank.test.mjs"
+    "test:agent-runtime": "node --test backend/agent-runtime/mission-contract.test.mjs backend/agent-runtime/function-bank.test.mjs backend/agent-runtime/function-bank-mission-adapter.test.mjs"
   },
   "dependencies": {
     "axios": "^1.20.0",
@@ -35,6 +35,7 @@
     "classnames": "^2.3.1",
     "cors": "^2.8.6",
     "express": "^5.2.1",
+    "pg": "^8.23.0",
     "react": "^18.3.1",
     "react-chartjs-2": "^5.3.1",
     "react-dom": "^18.3.1",
@@ -43,12 +44,13 @@
     "socket.io": "^4.8.3",
     "socket.io-client": "^4.0.0",
     "vite": "^6.4.3",
-    "ws": "8.21.3",
-    "pg": "^8.23.0"
+    "ws": "8.21.3"
   },
   "devDependencies": {
     "@testing-library/jest-dom": "^5.17.0",
     "@testing-library/react": "^13.4.0",
+    "@types/cors": "^2.8.19",
+    "@types/express": "^5.0.6",
     "@types/jest": "^27.5.2",
     "@types/supertest": "^7.2.0",
     "@typescript-eslint/eslint-plugin": "^5.62.0",

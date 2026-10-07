@@ -6,7 +6,6 @@ on:
       - main
       - audit/2026-09-21-runtime-proxy-repair
       - audit/2026-09-22-runtime-hardening
-      - hotl-agent-mission-runtime
   pull_request:
     branches:
       - main
@@ -27,11 +26,7 @@ jobs:
       - name: Checkout
         run: |
           git clone "https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}.git" .
-          if [ -n "${GITHUB_HEAD_REF}" ]; then
-            git fetch --no-tags origin "refs/heads/${GITHUB_HEAD_REF}"
-          else
-            git fetch --no-tags origin "${GITHUB_REF}"
-          fi
+          git fetch --no-tags origin "${{ github.ref }}"
           git checkout --detach FETCH_HEAD
 
       - name: Set up Node.js
