@@ -57,7 +57,12 @@ export class UserService {
         return user.preferences;
     }
 
-    async validateUserSession(_sessionId: string): Promise<boolean> {
-        return true;
+    async validateUserSession(sessionId: string): Promise<boolean> {
+        // Minimal v1: a session is valid if it is a non-empty string and maps to a known user.
+        // This replaces the previous "always true" semantics.
+        if (!sessionId || typeof sessionId !== 'string') {
+            return false;
+        }
+        return userStore.has(sessionId);
     }
 }
