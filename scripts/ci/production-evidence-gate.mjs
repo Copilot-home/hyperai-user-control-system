@@ -1,6 +1,8 @@
 import { mkdir, writeFile } from 'node:fs/promises';
 import { execFile } from 'node:child_process';
 import { promisify } from 'node:util';
+import path from 'node:path';
+import process from 'node:process';
 import { classifyProductionGate } from '../../backend/ed-narsg/production-gate.mjs';
 import { assertJevWorkerAttestation } from '../../backend/ed-narsg/jev-worker-attestation.mjs';
 
@@ -62,7 +64,13 @@ async function packageLockIntegrityEvidence() {
 
 async function dependencyEvidence() {
   try {
-    const { stdout } = await execFileAsync('npm', ['audit', '--omit=dev', '--json'], {
+    const npmExecutable = process.platform === 'win32'
+      ? process.execPath
+      : 'npm';
+    const npmArgs = process.platform === 'win32'
+      ? [path.resolve(path.dirname(process.execPath), 'node_modules', 'npm', 'bin', 'npm-cli.js'), 'audit', '--omit=dev', '--json']
+      : ['audit', '--omit=dev', '--json'];
+    const { stdout } = await execFileAsync(npmExecutable, npmArgs, {
       timeout: 120000,
       maxBuffer: 10 * 1024 * 1024,
     });

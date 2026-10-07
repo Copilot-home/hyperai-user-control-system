@@ -1,6 +1,7 @@
 import React from 'react';
 import { SystemController } from '../components/control-panel/SystemController';
 import { RuntimeLaneStatus } from '../components/control-panel/RuntimeLaneStatus';
+import { EmpathyLiveFeed } from '../components/control-panel/EmpathyLiveFeed';
 
 const SymphonyControl: React.FC = () => {
     return (
@@ -11,6 +12,7 @@ const SymphonyControl: React.FC = () => {
                 remain quarantined, degraded, or local-only until runtime authority is fresh and promotion is
                 deliberate.
             </p>
+            <EmpathyLiveFeed />
             <SystemController />
             <RuntimeLaneStatus />
         </div>

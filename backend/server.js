@@ -17,6 +17,7 @@ const cors = require('cors');
 const autonomyRuntime = require('./services/autonomyRuntime');
 const { buildRuntimeAuthority, classifyLane } = require('./services/runtimeAuthority');
 const runtimeManager = require('./services/runtimeManager');
+const hotlApprovalGate = require('./services/hotlApprovalGate');
 
 const app = express();
 app.use(cors());
@@ -2326,6 +2327,41 @@ app.get('/api/runtime/ecosystems', async (req, res) => {
             aidev,
         },
     });
+});
+
+app.get('/api/hotl/approvals', (req, res) => {
+    res.json({ generated_at: new Date().toISOString(), requests: hotlApprovalGate.pending() });
+});
+
+app.post('/api/hotl/approvals', (req, res) => {
+    try {
+        const request = hotlApprovalGate.create(req.body || {});
+        res.status(201).json(request);
+    } catch (error) {
+        res.status(400).json({ status: 'invalid', detail: error instanceof Error ? error.message : String(error) });
+    }
+});
+
+app.post('/api/hotl/approvals/:id/decision', (req, res) => {
+    try {
+        const request = hotlApprovalGate.resolve(req.params.id, req.body?.decision, req.body?.operator || 'human-on-the-loop');
+        if (!request) {
+            res.status(404).json({ status: 'missing', detail: 'Approval request was not found.' });
+            return;
+        }
+        res.json(request);
+    } catch (error) {
+        res.status(400).json({ status: 'invalid', detail: error instanceof Error ? error.message : String(error) });
+    }
+});
+
+app.get('/api/hotl/approvals/:id', (req, res) => {
+    const request = hotlApprovalGate.get(req.params.id);
+    if (!request) {
+        res.status(404).json({ status: 'missing', detail: 'Approval request was not found.' });
+        return;
+    }
+    res.json(request);
 });
 
 app.get('/api/workspace/session', async (req, res) => {

@@ -201,11 +201,12 @@ function spawnDetached(command, args, env) {
 }
 
 async function runBuild(env) {
-  const npmCommand = process.platform === "win32" ? "npm.cmd" : "npm";
+  const npmCli = process.platform === "win32"
+    ? path.resolve(path.dirname(process.execPath), "node_modules", "npm", "bin", "npm-cli.js")
+    : "npm";
 
   await new Promise((resolve, reject) => {
-    const npmCommand = process.platform === "win32" ? "npm.cmd" : "npm";
-    const build = spawn(npmCommand, ["run", "ci:build:isolated"], {
+    const build = spawn(process.execPath, [npmCli, "run", "ci:build:isolated"], {
       cwd: projectRoot,
       env: { ...process.env, ...env },
       stdio: "inherit",

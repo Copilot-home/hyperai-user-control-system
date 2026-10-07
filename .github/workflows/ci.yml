@@ -5,6 +5,7 @@ on:
     branches:
       - main
       - audit/2026-09-21-runtime-proxy-repair
+      - audit/2026-09-22-runtime-hardening
   pull_request:
     branches:
       - main
@@ -18,6 +19,26 @@ permissions:
   contents: read
 
 jobs:
+  agent-runtime-contract:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout
+        run: |
+          git clone "https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}.git" .
+          git fetch --no-tags origin "${{ github.ref }}"
+          git checkout --detach FETCH_HEAD
+
+      - name: Set up Node.js
+        run: |
+          curl -fsSL https://deb.nodesource.com/setup_20.x | sudo bash -
+          sudo apt-get install -y nodejs
+          node --version
+          npm --version
+
+      - name: Run HOTL agent runtime contract tests
+        run: npm run test:agent-runtime
+
   docker-surface-audit:
     runs-on: ubuntu-latest
     timeout-minutes: 10
@@ -62,12 +83,7 @@ jobs:
 
       - name: Build production artifact
         run: npm run ci:build
-      - name: Upload production artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: hyperai-dist-${{ github.sha }}
-          path: dist
-          if-no-files-found: error
+
   browser-agent-smoke:
     runs-on: ubuntu-latest
     timeout-minutes: 20
@@ -89,11 +105,8 @@ jobs:
       - name: Install dependencies
         run: npm ci --no-audit --no-fund
 
-      - name: Download production artifact
-        uses: actions/download-artifact@v4
-        with:
-          name: hyperai-dist-${{ github.sha }}
-          path: dist
+      - name: Build production artifact
+        run: npm run ci:build
 
       - name: Install Playwright
         run: npx playwright install --with-deps chromium

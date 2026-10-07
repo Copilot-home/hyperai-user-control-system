@@ -6,6 +6,7 @@ import empathyRoutes from './routes/empathy.routes';
 import vietnameseRoutes from './routes/vietnamese.routes';
 import userRoutes from './routes/user.routes';
 import notebookRoutes from './routes/notebooklm.routes';
+import workspaceRoutes from './routes/workspace.routes';
 
 const buildRuntimeCapabilities = () => ({
     status: 'ok',
@@ -36,8 +37,9 @@ export const createApp = () => {
     app.use('/api/vietnamese', vietnameseRoutes);
     app.use('/api/users', userRoutes);
     app.use('/api/notebooklm', notebookRoutes);
+    app.use('/api/workspace', workspaceRoutes);
 
-    app.use((_req, res) => {
+    app.use((_req: Request, res: Response) => {
         res.status(404).json({ message: 'Not found' });
     });
 
