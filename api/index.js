@@ -1,10 +1,12 @@
 // APΩ Home Cloud - Vercel proxy to the live Node Gateway.
 //
 // Production invariant:
-// - The upstream gateway MUST be supplied through HYPERAI_UPSTREAM_URL.
+// - The upstream gateway SHOULD be supplied through HYPERAI_UPSTREAM_URL.
 // - Never hard-code an ephemeral tunnel URL into the deployed artifact.
-// - If the upstream is unavailable or unconfigured, fail closed with a
-//   machine-readable 503/502 response and do not expose the upstream address.
+// - Write/action routes remain fail-closed when the upstream is unavailable.
+// - Read-only observability routes stay available in a bounded Recoverable state
+//   so operators can see exactly why authority is unavailable instead of getting
+//   a blind 503 from the control plane.
 
 const UPSTREAM = process.env.HYPERAI_UPSTREAM_URL || '';
 
@@ -72,9 +74,115 @@ function applyCors(req, res) {
 
 const UPSTREAM_TIMEOUT_MS = 15_000;
 const MAX_REQUEST_BODY_BYTES = 1_048_576;
+const READ_ONLY_FALLBACK_ROUTES = new Set([
+  '/api/health',
+  '/api/runtime/capabilities',
+  '/api/runtime/state',
+]);
 
 function jsonError(res, status, error, detail) {
   res.status(status).json({ error, detail });
+}
+
+function normalizedPath(req) {
+  const target = getTargetPath(req);
+  const queryIndex = target.indexOf('?');
+  return queryIndex >= 0 ? target.slice(0, queryIndex) : target;
+}
+
+function buildFallbackPayload(pathname) {
+  const checkedAt = new Date().toISOString();
+  const detail = 'Cloud control plane is reachable, but no validated HYPERAI_UPSTREAM_URL is configured. Runtime authority remains disabled.';
+
+  if (pathname === '/api/health') {
+    return {
+      status: 'degraded',
+      mode: 'cloud-control-plane',
+      authority: false,
+      recoverable: true,
+      upstream_configured: false,
+      detail,
+      checked_at: checkedAt,
+    };
+  }
+
+  if (pathname === '/api/runtime/capabilities') {
+    return {
+      boundary_state: 'recoverable',
+      autonomous_core_ready: false,
+      execution_authority: false,
+      cloud_control_plane: true,
+      upstream_configured: false,
+      safe_recovery_available: true,
+      selected_action: 'hold_core_degraded',
+      reason: detail,
+      checked_at: checkedAt,
+      capabilities: {
+        read_only_observability: true,
+        write_actions: false,
+        local_runtime: false,
+      },
+    };
+  }
+
+  if (pathname === '/api/runtime/state') {
+    return {
+      classification: 'Recoverable',
+      message: detail,
+      status: {
+        mode: 'cloud-control-plane',
+        authority: false,
+        upstream_configured: false,
+        selected_action: 'hold_core_degraded',
+      },
+      proof: {
+        heartbeat: {
+          status: 'degraded',
+          detail,
+          source: 'vercel-control-plane',
+          at: checkedAt,
+        },
+        lastAction: 'hold_core_degraded',
+        metrics: {
+          ticks: 0,
+          probeCycles: 1,
+        },
+        latestProbeSummary: {
+          overallStatus: 'degraded',
+          checkedAt,
+          probes: [
+            {
+              id: 'runtime-upstream',
+              status: 'degraded',
+              detail: 'HYPERAI_UPSTREAM_URL missing or invalid',
+            },
+          ],
+        },
+      },
+    };
+  }
+
+  return null;
+}
+
+function serveBoundedFallback(req, res) {
+  if (req.method !== 'GET' && req.method !== 'HEAD') {
+    return false;
+  }
+
+  const pathname = normalizedPath(req);
+  if (!READ_ONLY_FALLBACK_ROUTES.has(pathname)) {
+    return false;
+  }
+
+  const payload = buildFallbackPayload(pathname);
+  res.setHeader('Cache-Control', 'no-store');
+  if (req.method === 'HEAD') {
+    res.status(200).end();
+  } else {
+    res.status(200).json(payload);
+  }
+  return true;
 }
 
 async function getBody(req) {
@@ -104,11 +212,15 @@ export default async function handler(req, res) {
 
   const upstreamBase = getValidatedUpstreamBase();
   if (!upstreamBase) {
+    if (serveBoundedFallback(req, res)) {
+      return;
+    }
+
     return jsonError(
       res,
       503,
       'upstream_not_configured',
-      'HYPERAI_UPSTREAM_URL is missing or invalid; runtime authority is unavailable.',
+      'Runtime authority is unavailable. Only bounded read-only observability endpoints remain available until HYPERAI_UPSTREAM_URL is configured.',
     );
   }
 
@@ -125,15 +237,15 @@ export default async function handler(req, res) {
     let upstreamRes;
     try {
       upstreamRes = await fetch(upstreamUrl, {
-      method: req.method,
-      headers: {
-        'Content-Type': 'application/json',
-        ...(req.headers.authorization
-          ? { Authorization: req.headers.authorization }
-          : {}),
-      },
-      body,
-      signal: controller.signal,
+        method: req.method,
+        headers: {
+          'Content-Type': 'application/json',
+          ...(req.headers.authorization
+            ? { Authorization: req.headers.authorization }
+            : {}),
+        },
+        body,
+        signal: controller.signal,
       });
     } finally {
       clearTimeout(timeout);
@@ -146,6 +258,10 @@ export default async function handler(req, res) {
     );
     return res.status(upstreamRes.status).send(upstreamBody);
   } catch {
+    if (serveBoundedFallback(req, res)) {
+      return;
+    }
+
     return jsonError(
       res,
       502,
