@@ -11,6 +11,7 @@ import Missions from './pages/Missions';
 import Systems from './pages/Systems';
 import SymphonyControl from './pages/SymphonyControl';
 import Settings from './pages/Settings';
+import Estate from './pages/Estate';
 
 const App: React.FC = () => {
     return (
@@ -25,6 +26,7 @@ const App: React.FC = () => {
                                     <Route path="/chat" component={Chat} />
                                     <Route path="/missions" component={Missions} />
                                     <Route path="/systems" component={Systems} />
+                                    <Route path="/estate" component={Estate} />
                                     <Route path="/symphony-control" component={SymphonyControl} />
                                     <Route path="/settings" component={Settings} />
                                     <Route render={() => <Redirect to="/" />} />

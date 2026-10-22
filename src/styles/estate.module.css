@@ -1,0 +1,234 @@
+.page {
+    min-height: 100vh;
+    padding: 24px;
+    color: #10203b;
+    background: radial-gradient(circle at top right, rgba(71, 119, 255, 0.16), transparent 34%), #f4f7fb;
+}
+
+.hero,
+.section,
+.decisionGrid article,
+.metricCard,
+.error {
+    border: 1px solid rgba(19, 44, 86, 0.09);
+    background: rgba(255, 255, 255, 0.94);
+    box-shadow: 0 18px 50px rgba(46, 75, 136, 0.08);
+}
+
+.hero {
+    display: flex;
+    justify-content: space-between;
+    gap: 24px;
+    align-items: flex-start;
+    padding: 28px;
+    border-radius: 28px;
+}
+
+.hero h1,
+.section h2,
+.hero p,
+.decisionGrid p,
+.checkCard p {
+    margin: 0;
+}
+
+.hero h1 {
+    max-width: 780px;
+    font-size: clamp(2rem, 4vw, 3.6rem);
+    line-height: 1.05;
+    letter-spacing: -0.04em;
+}
+
+.eyebrow {
+    margin: 0 0 10px;
+    color: #315ed3;
+    font-size: 0.76rem;
+    font-weight: 800;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+}
+
+.supporting {
+    max-width: 740px;
+    margin-top: 16px !important;
+    color: #54647f;
+    line-height: 1.6;
+}
+
+.decision {
+    min-width: 170px;
+    padding: 18px;
+    display: grid;
+    gap: 5px;
+    border-radius: 18px;
+}
+
+.decision strong {
+    font-size: 1.45rem;
+}
+
+.decision span,
+.decision small,
+.decisionGrid span,
+.metricCard span,
+.sectionHeader span,
+.row small {
+    color: #65728a;
+}
+
+.proven {
+    color: #096d4f !important;
+    background: #ddf8ed;
+    border-color: rgba(9, 109, 79, 0.18);
+}
+
+.held {
+    color: #9a5b00 !important;
+    background: #fff2d7;
+    border-color: rgba(154, 91, 0, 0.18);
+}
+
+.error {
+    margin-top: 16px;
+    padding: 14px 18px;
+    border-radius: 16px;
+    color: #a52626;
+}
+
+.decisionGrid,
+.metricGrid,
+.checkGrid,
+.twoColumn {
+    display: grid;
+    gap: 14px;
+    margin-top: 16px;
+}
+
+.decisionGrid {
+    grid-template-columns: repeat(4, 1fr);
+}
+
+.decisionGrid article {
+    padding: 18px;
+    border-radius: 18px;
+}
+
+.decisionGrid p {
+    margin-top: 9px;
+    line-height: 1.5;
+}
+
+.metricGrid {
+    grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+}
+
+.metricCard {
+    display: grid;
+    gap: 4px;
+    padding: 16px;
+    border-radius: 18px;
+}
+
+.metricCard strong {
+    font-size: 1.8rem;
+}
+
+.section {
+    margin-top: 16px;
+    padding: 20px;
+    border-radius: 22px;
+}
+
+.sectionHeader {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 12px;
+    margin-bottom: 14px;
+}
+
+.checkGrid {
+    grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+    margin-top: 0;
+}
+
+.checkCard,
+.row {
+    border: 1px solid rgba(19, 44, 86, 0.08);
+    background: #f9fbff;
+    border-radius: 16px;
+}
+
+.checkCard {
+    padding: 14px;
+}
+
+.checkCard span,
+.row > span {
+    display: inline-flex;
+    width: fit-content;
+    padding: 4px 8px;
+    border-radius: 999px;
+    font-size: 0.72rem;
+    font-weight: 800;
+}
+
+.checkCard p {
+    margin-top: 9px;
+    line-height: 1.4;
+}
+
+.twoColumn {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.twoColumn .section {
+    margin-top: 0;
+}
+
+.list {
+    display: grid;
+    gap: 10px;
+}
+
+.row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 14px;
+    padding: 13px 14px;
+}
+
+.row div {
+    min-width: 0;
+    display: grid;
+    gap: 4px;
+}
+
+.row strong,
+.row small {
+    overflow-wrap: anywhere;
+}
+
+.footer {
+    padding: 22px 4px 4px;
+    color: #65728a;
+    font-size: 0.82rem;
+}
+
+@media (max-width: 900px) {
+    .hero,
+    .row {
+        align-items: stretch;
+        flex-direction: column;
+    }
+
+    .decisionGrid,
+    .twoColumn {
+        grid-template-columns: 1fr;
+    }
+
+    .decision {
+        min-width: 0;
+    }
+}

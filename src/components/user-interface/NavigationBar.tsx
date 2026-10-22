@@ -16,6 +16,9 @@ export const NavigationBar: React.FC = () => {
                     <Link to="/systems">Systems</Link>
                 </li>
                 <li>
+                    <Link to="/estate">APΩ Estate</Link>
+                </li>
+                <li>
                     <Link to="/symphony-control">Operator Control</Link>
                 </li>
                 <li>

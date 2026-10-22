@@ -79,6 +79,7 @@ const executeTextProbe = async (url) => {
 const bootTimestamp = Date.now();
 const serverFilePath = path.join(__dirname, 'server.js');
 const workspaceRoot = path.resolve(__dirname, '..', '..');
+const canonicalEstateDir = path.resolve(workspaceRoot, 'runtime', 'canonical_estate');
 const policyStatePath = path.resolve(workspaceRoot, 'runtime', 'hyperai-autonomous-policy.json');
 const runtimeManifestPath = path.resolve(workspaceRoot, 'runtime', 'hyperai-autonomous-runtime.json');
 const notebookRegistry = [
@@ -299,6 +300,75 @@ const readJsonFile = (filePath, fallback = {}) => {
     } catch {
         return fallback;
     }
+};
+
+const buildCanonicalEstateSummary = () => {
+    const readRegistry = (name) => readJsonFile(path.join(canonicalEstateDir, `${name}.json`), { count: 0, records: [] });
+    const canonicalState = readJsonFile(path.join(canonicalEstateDir, 'canonical_state.json'), {});
+    const audit = readJsonFile(path.join(canonicalEstateDir, 'mission_compliance_audit.json'), {});
+    const models = readRegistry('model_registry');
+    const services = readRegistry('service_registry');
+    const routes = readRegistry('route_registry');
+    const health = readRegistry('health_registry');
+    const nodes = readRegistry('node_registry');
+    const memory = readRegistry('memory_registry');
+    const ledger = readRegistry('evidence_ledger');
+    const modelRecords = Array.isArray(models.records) ? models.records : [];
+    const serviceRecords = Array.isArray(services.records) ? services.records : [];
+    const nodeRecords = Array.isArray(nodes.records) ? nodes.records : [];
+    const memoryRecords = Array.isArray(memory.records) ? memory.records : [];
+    const healthRecords = Array.isArray(health.records) ? health.records : [];
+    const activeModels = modelRecords.filter((item) => item.eligible === true);
+    const ineligibleModels = modelRecords.filter((item) => item.eligible !== true);
+
+    return {
+        generated_at: new Date().toISOString(),
+        estate_generated_at: canonicalState.generated_at || null,
+        decision: canonicalState.canonical === true ? 'CANONICAL' : 'HOLD',
+        why: canonicalState.canonical === true
+            ? 'All active estate objects passed callable, persistence, parity, registry, memory, recovery, and CI gates.'
+            : 'One or more proof-bound canonical gates remain unresolved.',
+        risk: ineligibleModels.length > 0
+            ? `${ineligibleModels.length} discovered model artifacts remain outside the active canonical set and are explicitly classified.`
+            : 'No discovered model is outside the active canonical set.',
+        outcome: audit.outcome || 'unknown',
+        state_change: canonicalState.truth_state || 'UNKNOWN',
+        canonical_state: canonicalState,
+        audit: {
+            outcome: audit.outcome || 'unknown',
+            truth_state: audit.truth_state || 'UNKNOWN',
+            checked_at: audit.checked_at || null,
+            checks: audit.checks || {},
+        },
+        counts: {
+            models: models.count || modelRecords.length,
+            canonical_models: activeModels.filter((item) => item.canonical === true).length,
+            ineligible_models: ineligibleModels.length,
+            services: services.count || serviceRecords.length,
+            routes: routes.count || 0,
+            health_targets: health.count || healthRecords.length,
+            nodes: nodes.count || nodeRecords.length,
+            memory_systems: memory.count || memoryRecords.length,
+            evidence_entries: ledger.count || 0,
+        },
+        nodes: nodeRecords.map((item) => ({
+            id: item.node_id,
+            type: item.type,
+            reachable: item.reachable,
+            verified: item.verified,
+            persistent: item.state?.persistent === true,
+            truth_state: item.state?.truth_state || 'UNKNOWN',
+            runtimes: Array.isArray(item.runtimes) ? item.runtimes : [],
+            optional: item.optional_inventory_slot === true,
+        })),
+        runtimes: serviceRecords
+            .filter((item) => ['model_runtime', 'reasoning_provider', 'agent_gateway'].includes(item.type))
+            .map((item) => ({ id: item.service_id, healthy: item.state?.verified === true, persistent: item.state?.persistent === true, truth_state: item.state?.truth_state || 'UNKNOWN' })),
+        services: serviceRecords.map((item) => ({ id: item.service_id, type: item.type, healthy: item.state?.verified === true, persistent: item.state?.persistent === true, truth_state: item.state?.truth_state || 'UNKNOWN' })),
+        memory: memoryRecords.map((item) => ({ id: item.memory_id, identity_verified: item.identity_verified === true, read_verified: item.read_path_verified === true, write_verified: item.write_path_verified === true, replicated: item.replication_verified === true, truth_state: item.state?.truth_state || 'UNKNOWN' })),
+        excluded_models: ineligibleModels.map((item) => ({ id: item.id, reason: item.eligibility_reason || 'unknown', truth_state: item.state?.truth_state || 'UNKNOWN' })),
+        unhealthy_targets: healthRecords.filter((item) => item.status !== 'healthy').map((item) => ({ target: item.target, status: item.status, error: item.error || null })),
+    };
 };
 
 const buildAppBuildRuntimeRegistry = () => {
@@ -2302,6 +2372,9 @@ const buildRuntimeCapabilities = async () => {
 };
 
 app.get('/api/health', (req, res) => res.json({ status: 'OK', message: 'APO-NET Core Active' }));
+app.get('/api/estate/summary', (req, res) => {
+    res.json(buildCanonicalEstateSummary());
+});
 app.get('/api/runtime/capabilities', async (req, res) => {
     res.json(await buildRuntimeCapabilities());
 });
