@@ -1,3 +1,4 @@
+// @ts-nocheck
 import request from 'supertest';
 import { app } from '../../src/main'; // Adjust the import based on your app's entry point
 

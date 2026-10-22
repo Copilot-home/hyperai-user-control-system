@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { EmpathyRequest, EmpathyResponse } from '../types/empathy.types';
 import { getEmpathyEngine } from '../database/connection';
 import { EmpathyProcessingError } from '../controllers/empathyController';

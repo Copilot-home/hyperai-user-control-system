@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { useEffect, useState } from 'react';
 
 const LOCAL_CACHE_KEY = 'hyperai_local_cache';

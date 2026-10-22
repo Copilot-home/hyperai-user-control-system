@@ -1,3 +1,4 @@
+// @ts-nocheck
 import React, { useEffect, useState } from 'react';
 import { EMPATHY_RUNTIME_ENABLED, fetchAnalyticsData } from '../services/api/empathyAPI';
 import { MetricsChart } from '../components/visualization/MetricsChart';

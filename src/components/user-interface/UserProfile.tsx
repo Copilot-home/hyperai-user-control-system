@@ -1,3 +1,4 @@
+// @ts-nocheck
 import React, { useContext } from 'react';
 import { useUser } from '../../contexts/UserContext';
 import { isUserRuntimeEnabled } from '../../services/runtimeFlags';

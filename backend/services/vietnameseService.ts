@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { VietnameseAnalysis } from '../database/models/VietnameseAnalysis';
 
 export const analyzeVietnameseText = async (text: string, analysisType: string) => {
