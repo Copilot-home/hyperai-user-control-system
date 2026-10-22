@@ -25,6 +25,14 @@ The HyperAI User Control System is the orchestrator for the autonomy dashboards.
    - `memory/runtime_execution_todo.md`
    Process-first and delta-first means that if nothing changed since the last cycle, do not restart the backend nor run expensive verification.
 
+### Runtime observability and watchdog
+
+- The canonical Windows watchdog entrypoint is `scripts/runtime/titan-fabric-watchdog.ps1`. Scheduled tasks must reference this file inside the active product checkout, never a duplicate checkout.
+- Watchdog receipts are append-only JSONL at `../runtime/titan-fabric/watchdog.jsonl`. Every receipt includes a schema version, run ID, source, component, transition, detail, and evidence.
+- Detached runtime launches write stdout/stderr under `../runtime/process-logs/` and append process identity receipts to `process-launches.jsonl` or `runtime-recovery-launches.jsonl`.
+- Missing optional containers are recorded as `unavailable` and held without a blind restart. A configured container is restarted only when its exact Docker identity exists and its health probe fails.
+- Runtime facts come from the receipt plus live readback. A scheduled-task exit code, an open port, or a source declaration alone is not sufficient proof of healthy authority.
+
 ## Quarantine flags
 
 - `VITE_ENABLE_VIETNAMESE_RUNTIME`

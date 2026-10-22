@@ -10,12 +10,13 @@
 */
 
 import { createReadStream, existsSync } from "node:fs";
-import { createServer } from "node:http";
+import { createServer, request as requestHttp } from "node:http";
 import path from "node:path";
 import process from "node:process";
 
 const distDir = process.argv[2];
 const port = Number(process.argv[3] ?? 4177);
+const apiOrigin = new URL(process.env.HYPERAI_API_ORIGIN ?? "http://127.0.0.1:5000");
 
 if (!distDir) {
   console.error("Usage: node scripts/runtime/static-spa-server.mjs <distDir> <port>");
@@ -35,6 +36,33 @@ const contentTypes = {
 };
 
 const server = createServer((req, res) => {
+  if (/^\/api(?:[/?]|$)/.test(req.url ?? "/")) {
+    const proxyRequest = requestHttp(
+      new URL(req.url ?? "/api", apiOrigin),
+      {
+        method: req.method,
+        headers: {
+          ...req.headers,
+          host: apiOrigin.host,
+        },
+      },
+      (proxyResponse) => {
+        res.writeHead(proxyResponse.statusCode ?? 502, proxyResponse.headers);
+        proxyResponse.pipe(res);
+      },
+    );
+
+    proxyRequest.on("error", (error) => {
+      if (!res.headersSent) {
+        res.writeHead(502, { "Content-Type": "application/json; charset=utf-8" });
+      }
+      res.end(JSON.stringify({ status: "proxy_error", message: error.message }));
+    });
+
+    req.pipe(proxyRequest);
+    return;
+  }
+
   const requestPath = (req.url ?? "/").split("?")[0];
   const normalizedPath = requestPath === "/" ? "/index.html" : requestPath;
   const candidatePath = path.join(distDir, normalizedPath);

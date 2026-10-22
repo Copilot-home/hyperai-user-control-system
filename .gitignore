@@ -4,6 +4,7 @@ dist-isolated/
 .tmp/
 .tmp-ts-candidate/
 coverage/
+/runtime/
 *.exe
 *.pdf
 .DS_Store

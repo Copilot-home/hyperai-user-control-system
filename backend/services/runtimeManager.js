@@ -6,6 +6,8 @@ const projectRoot = path.resolve(__dirname, '..', '..');
 const runtimeDir = path.resolve(projectRoot, '..', 'runtime');
 const manifestPath = path.join(runtimeDir, 'hyperai-autonomous-runtime.json');
 const startScriptPath = path.join(projectRoot, 'scripts', 'runtime', 'start-autonomous-runtime.mjs');
+const processLogDir = path.join(runtimeDir, 'process-logs');
+const recoveryLaunchLogPath = path.join(processLogDir, 'runtime-recovery-launches.jsonl');
 
 const DEFAULT_BACKEND_PORT = Number(process.env.HYPERAI_DEFAULT_BACKEND_PORT || 5000);
 const RECOVERY_COOLDOWN_MS = Number(process.env.HYPERAI_RUNTIME_RECOVERY_COOLDOWN_MS || 120000);
@@ -14,7 +16,40 @@ const state = { launchStartedAt: null, lastEvaluatedAt: null, lastHealthyAt: nul
 const readManifest = () => { if (!fs.existsSync(manifestPath)) return null; try { return JSON.parse(fs.readFileSync(manifestPath, 'utf8')); } catch (error) { state.lastError = error instanceof Error ? error.message : String(error); return null; } };
 const probeUrl = async (url) => { try { return (await fetch(url)).ok; } catch { return false; } };
 const inspectManagedRuntime = async () => { const manifest = readManifest(); if (!manifest?.managed || !manifest.backendUrl || !manifest.frontendUrl) return { manifest, healthy: false, reason: 'Managed runtime manifest is missing or incomplete.' }; const [backendHealthy, frontendHealthy] = await Promise.all([probeUrl(`${manifest.backendUrl}/api/health`), probeUrl(manifest.frontendUrl)]); if (backendHealthy && frontendHealthy) { state.lastHealthyAt = new Date().toISOString(); return { manifest, healthy: true, reason: 'Managed runtime manifest is live and responding.' }; } return { manifest, healthy: false, reason: 'Managed runtime manifest exists but one or more managed listeners are unreachable.' }; };
-const spawnRecoveryProcess = (reason) => { state.launchStartedAt = new Date().toISOString(); state.lastReason = reason; state.lastError = null; const child = spawn('node', [startScriptPath], { cwd: projectRoot, env: { ...process.env }, detached: true, stdio: 'ignore', windowsHide: true }); child.unref(); };
+const spawnRecoveryProcess = (reason) => {
+    state.launchStartedAt = new Date().toISOString();
+    state.lastReason = reason;
+    state.lastError = null;
+    fs.mkdirSync(processLogDir, { recursive: true });
+    const stdoutPath = path.join(processLogDir, 'runtime-recovery.stdout.log');
+    const stderrPath = path.join(processLogDir, 'runtime-recovery.stderr.log');
+    const stdoutFd = fs.openSync(stdoutPath, 'a');
+    const stderrFd = fs.openSync(stderrPath, 'a');
+    try {
+        const child = spawn('node', [startScriptPath], {
+            cwd: projectRoot,
+            env: { ...process.env },
+            detached: true,
+            stdio: ['ignore', stdoutFd, stderrFd],
+            windowsHide: true,
+        });
+        child.unref();
+        fs.appendFileSync(recoveryLaunchLogPath, `${JSON.stringify({
+            schema_version: '2026-10-23.hyperai-runtime-recovery-launch.v1',
+            ts: state.launchStartedAt,
+            source: 'backend/services/runtimeManager.js',
+            reason,
+            pid: child.pid,
+            cwd: projectRoot,
+            script: startScriptPath,
+            stdout: stdoutPath,
+            stderr: stderrPath,
+        })}\n`, 'utf8');
+    } finally {
+        fs.closeSync(stdoutFd);
+        fs.closeSync(stderrFd);
+    }
+};
 const describeAction = ({ currentPort, healthy, launchActive, manifest }) => { if (healthy && manifest) return { status: 'ready', selectedAction: 'reuse_managed_runtime', reason: currentPort !== DEFAULT_BACKEND_PORT ? 'Managed autonomous runtime is healthy on its isolated authority port and can be reused without nested recovery.' : 'Managed autonomous runtime is healthy and can be reused.' }; if (currentPort !== DEFAULT_BACKEND_PORT) return { status: 'self-managed-skip', selectedAction: 'hold_current_runtime', reason: 'Current backend listener is already running outside the default authority port, so nested recovery is skipped.' }; if (launchActive) return { status: 'reconciling', selectedAction: 'reconcile_managed_runtime', reason: 'Managed runtime recovery is already in progress.' }; return { status: manifest ? 'managed-runtime-degraded' : 'managed-runtime-missing', selectedAction: 'start_managed_runtime', reason: manifest ? 'Managed runtime metadata exists but the isolated listeners are not healthy.' : 'Managed runtime metadata is missing, so the default runtime must rebuild the isolated authority path.' }; };
 const getRecoveryWindowOpen = () => !state.launchStartedAt ? false : Date.now() - new Date(state.launchStartedAt).getTime() < RECOVERY_COOLDOWN_MS;
 const inspectRecoveryState = async ({ currentPort = DEFAULT_BACKEND_PORT } = {}) => { const inspectedAt = new Date().toISOString(); state.lastEvaluatedAt = inspectedAt; const managed = await inspectManagedRuntime(); const launchActive = getRecoveryWindowOpen() && !managed.healthy; const action = describeAction({ currentPort, healthy: managed.healthy, launchActive, manifest: managed.manifest }); return { inspectedAt, currentPort, status: action.status, selectedAction: action.selectedAction, reason: `${action.reason} ${managed.reason}`.trim(), managedRuntime: managed.manifest ? { backendUrl: managed.manifest.backendUrl || null, frontendUrl: managed.manifest.frontendUrl || null, managed: Boolean(managed.manifest.managed), checkedAt: managed.manifest.checkedAt || null, healthy: managed.healthy } : null, launchStartedAt: state.launchStartedAt, lastHealthyAt: state.lastHealthyAt, lastEvaluatedAt: state.lastEvaluatedAt, lastError: state.lastError }; };
