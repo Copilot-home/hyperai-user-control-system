@@ -15,7 +15,7 @@ export const createUser = async (req: Request, res: Response): Promise<void> => 
 
 export const getUser = async (req: Request, res: Response): Promise<void> => {
     try {
-        const userId = req.params.id;
+        const userId = req.params.id as string;
         const user = await userService.getUserById(userId);
         if (user) {
             res.status(200).json(user);
@@ -29,7 +29,7 @@ export const getUser = async (req: Request, res: Response): Promise<void> => {
 
 export const updateUser = async (req: Request, res: Response): Promise<void> => {
     try {
-        const userId = req.params.id;
+        const userId = req.params.id as string;
         const userData: Partial<UserRecord> = req.body;
         const updatedUser = await userService.updateUser(userId, userData);
         if (updatedUser) {
@@ -44,7 +44,7 @@ export const updateUser = async (req: Request, res: Response): Promise<void> => 
 
 export const deleteUser = async (req: Request, res: Response): Promise<void> => {
     try {
-        const userId = req.params.id;
+        const userId = req.params.id as string;
         const result = await userService.deleteUser(userId);
         if (result) {
             res.status(204).send();

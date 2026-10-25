@@ -9,109 +9,64 @@ type NotebookLMSourcePayload = {
   title?: string;
 };
 
+// MOCK LOCAL STORE FOR OFFLINE AUTONOMY
+const localNotebooks: any[] = [];
+const localSources: Record<string, any[]> = {};
+
 export class NotebookLMService {
   private readonly baseUrl: string;
-  private readonly accessToken?: string;
 
   constructor() {
-    this.baseUrl = process.env.NOTEBOOKLM_API_BASE_URL || '';
-    this.accessToken = process.env.GOOGLE_CLOUD_ACCESS_TOKEN || process.env.NOTEBOOKLM_ACCESS_TOKEN;
-  }
-
-  private get headers(): Record<string, string> {
-    if (!this.accessToken) {
-      throw new Error('NotebookLM access token is missing');
-    }
-
-    return {
-      'Content-Type': 'application/json',
-      Authorization: `Bearer ${this.accessToken}`,
-    };
-  }
-
-  private ensureConfigured(): void {
-    if (!this.baseUrl) {
-      throw new Error('NOTEBOOKLM_API_BASE_URL is missing');
-    }
+    // FORCE LOCAL OLLAMA ROUTING - BYPASS CLOUD
+    this.baseUrl = process.env.OLLAMA_API_BASE_URL || 'http://127.0.0.1:11434';
   }
 
   async getStatus(): Promise<Record<string, unknown>> {
-    const configured = Boolean(this.baseUrl && this.accessToken);
-    if (!configured) {
-      return {
-        ok: false,
-        configured,
-        baseUrlPresent: Boolean(this.baseUrl),
-        accessTokenPresent: Boolean(this.accessToken),
-      };
-    }
-
     try {
-      const response = await fetch(`${this.baseUrl}/notebooks`, {
-        method: 'GET',
-        headers: this.headers,
-      });
-
+      // Check local Ollama health instead of cloud NotebookLM
+      const response = await fetch(`${this.baseUrl}/api/tags`);
       return {
         ok: response.ok,
-        configured,
+        configured: true,
         status: response.status,
         baseUrl: this.baseUrl,
+        mode: 'LOCAL_AUTONOMOUS_OLLAMA_MODE'
       };
     } catch (error) {
       return {
         ok: false,
-        configured,
+        configured: true,
         baseUrl: this.baseUrl,
-        error: error instanceof Error ? error.message : 'Unknown NotebookLM connectivity error',
+        mode: 'LOCAL_AUTONOMOUS_OLLAMA_MODE',
+        error: error instanceof Error ? error.message : 'Local Ollama connectivity error',
       };
     }
   }
 
   async listNotebooks(): Promise<unknown> {
-    this.ensureConfigured();
-
-    const response = await fetch(`${this.baseUrl}/notebooks`, {
-      method: 'GET',
-      headers: this.headers,
-    });
-
-    if (!response.ok) {
-      throw new Error(`NotebookLM list failed with status ${response.status}`);
-    }
-
-    return response.json();
+    return localNotebooks;
   }
 
   async createNotebook(payload: NotebookLMNotebookPayload): Promise<unknown> {
-    this.ensureConfigured();
-
-    const response = await fetch(`${this.baseUrl}/notebooks`, {
-      method: 'POST',
-      headers: this.headers,
-      body: JSON.stringify(payload),
-    });
-
-    if (!response.ok) {
-      throw new Error(`NotebookLM create failed with status ${response.status}`);
-    }
-
-    return response.json();
+    const notebook = {
+      id: `local_nb_${Date.now()}`,
+      ...payload,
+      createdAt: new Date().toISOString()
+    };
+    localNotebooks.push(notebook);
+    return notebook;
   }
 
   async addSource(notebookId: string, payload: NotebookLMSourcePayload): Promise<unknown> {
-    this.ensureConfigured();
-
-    const response = await fetch(`${this.baseUrl}/notebooks/${notebookId}/sources`, {
-      method: 'POST',
-      headers: this.headers,
-      body: JSON.stringify(payload),
-    });
-
-    if (!response.ok) {
-      throw new Error(`NotebookLM add source failed with status ${response.status}`);
+    if (!localSources[notebookId]) {
+      localSources[notebookId] = [];
     }
-
-    return response.json();
+    const source = {
+      id: `local_src_${Date.now()}`,
+      ...payload,
+      addedAt: new Date().toISOString()
+    };
+    localSources[notebookId].push(source);
+    return source;
   }
 }

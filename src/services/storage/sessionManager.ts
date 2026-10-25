@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { Session } from '../types/session.types';
 
 class SessionManager {

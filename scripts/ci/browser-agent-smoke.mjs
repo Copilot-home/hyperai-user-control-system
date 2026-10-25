@@ -546,6 +546,16 @@ async function verifyBrowser() {
     await page.goto(`${FRONTEND_URL}/systems`, { waitUntil: "domcontentloaded", timeout: TIMEOUT_MS });
     await page.getByText("System Graph", { exact: false }).waitFor({ state: "visible", timeout: TIMEOUT_MS });
 
+    await page.goto(`${FRONTEND_URL}/estate`, { waitUntil: "domcontentloaded", timeout: TIMEOUT_MS });
+    await page.getByText("APΩ Canonical Estate", { exact: true }).waitFor({ state: "visible", timeout: TIMEOUT_MS });
+    await page.getByText("CANONICAL", { exact: true }).waitFor({ state: "visible", timeout: TIMEOUT_MS });
+    const estateBodyText = await page.locator("body").innerText();
+    for (const marker of ["Mission gates", "Memory fabric", "Explicit exclusions", "PROVEN"]) {
+      if (!estateBodyText.includes(marker)) {
+        throw new Error(`Estate surface missing proof marker: ${marker}`);
+      }
+    }
+
     await page.goto(`${FRONTEND_URL}/symphony-control`, { waitUntil: "domcontentloaded", timeout: TIMEOUT_MS });
     try {
       await page.getByText("Symphony Control Panel", { exact: false }).waitFor({ state: "visible", timeout: TIMEOUT_MS });

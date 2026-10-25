@@ -34,7 +34,11 @@ export class FunctionBank {
       if (typeof fn.matches === "function") return fn.matches(task, context) === true;
       return task?.function_id === fn.id || task?.capability === fn.capability;
     });
-    return candidates.map(({ execute, ...metadata }) => metadata);
+    return candidates.map(({ execute, readback, verify, ...metadata }) => ({
+      ...metadata,
+      has_readback: typeof readback === 'function',
+      has_verify: typeof verify === 'function',
+    }));
   }
 
   select(task, context = {}) {
@@ -79,6 +83,28 @@ export class FunctionBank {
     };
 
     return { ok: true, result, receipt };
+  }
+
+  async observe(selection, task, execution, context = {}) {
+    if (!selection?.id) throw new Error('FUNCTION_SELECTION_REQUIRED');
+    const definition = this.#functions.get(selection.id);
+    if (!definition) throw new Error('FUNCTION_NOT_FOUND');
+    if (typeof definition.readback !== 'function' || typeof definition.verify !== 'function') {
+      return { readback: null, unknown: true,
+        error: { classification: 'configuration', message: 'INDEPENDENT_READBACK_NOT_REGISTERED' } };
+    }
+    try {
+      const readback = await definition.readback(task, execution, context);
+      if (readback === null || readback === undefined) {
+        return { readback: null, unknown: true,
+          error: { classification: 'configuration', message: 'INDEPENDENT_READBACK_EMPTY' } };
+      }
+      const verified = await definition.verify(task, execution, readback, context);
+      return { readback, success_criteria_met: verified === true, unknown: verified !== true };
+    } catch (error) {
+      return { readback: null, unknown: true,
+        error: { classification: error?.classification || 'transient', message: 'INDEPENDENT_READBACK_FAILED' } };
+    }
   }
 
   size() {

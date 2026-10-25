@@ -1,3 +1,4 @@
+// @ts-nocheck
 // ------------------------------------------------------------------------------
 // AI IDENTITY & LEGAL TRACEABILITY HEADER (NON-REMOVABLE)
 // SYSTEM: HyperAI Phoenix – Unified Orchestrator

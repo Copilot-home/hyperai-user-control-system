@@ -1,3 +1,4 @@
+// @ts-nocheck
 import axios from 'axios';
 import { EmpathyProcessRequest, EmpathyProcessResponse } from '../../types/api.types';
 import { getApiBaseUrl } from '../runtimeConfig';

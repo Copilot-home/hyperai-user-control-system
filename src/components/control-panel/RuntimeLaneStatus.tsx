@@ -113,6 +113,52 @@ const selectedActionFromPolicy = (capabilities: RuntimeCapabilitiesResponse): st
     capabilities.autonomy_policy?.selected_action ||
     capabilities.autonomy_policy?.runtime_recovery?.selectedAction;
 
+const normalizeRuntimeCapabilities = (response: RuntimeCapabilitiesResponse): RuntimeCapabilitiesResponse => {
+    const registry = response.app_build_runtime_registry;
+    const creatorProtocol = response.creator_trace_protocol;
+
+    return {
+        ...response,
+        lanes: mergeBrowserCockpitLanes(Array.isArray(response.lanes) ? response.lanes : []),
+        creator_trace_protocol: creatorProtocol
+            ? {
+                ...creatorProtocol,
+                baseline: {
+                    ...creatorProtocol.baseline,
+                    k_domain: Array.isArray(creatorProtocol.baseline?.k_domain)
+                        ? creatorProtocol.baseline.k_domain
+                        : CREATOR_EYES_BASELINE.kDomain,
+                },
+                path_witness: Array.isArray(creatorProtocol.path_witness)
+                    ? creatorProtocol.path_witness
+                    : [],
+            }
+            : undefined,
+        app_build_runtime_registry: registry
+            ? {
+                ...registry,
+                summary: registry.summary || {},
+                runtime_surfaces: (Array.isArray(registry.runtime_surfaces) ? registry.runtime_surfaces : []).map(
+                    (surface) => ({
+                        ...surface,
+                        proofRefs: Array.isArray(surface.proofRefs) ? surface.proofRefs : [],
+                        blockers: Array.isArray(surface.blockers) ? surface.blockers : [],
+                        allowedActions: Array.isArray(surface.allowedActions) ? surface.allowedActions : [],
+                    }),
+                ),
+                model_bindings: (Array.isArray(registry.model_bindings) ? registry.model_bindings : []).map(
+                    (binding) => ({
+                        ...binding,
+                        taskClasses: Array.isArray(binding.taskClasses) ? binding.taskClasses : [],
+                        allowedUse: Array.isArray(binding.allowedUse) ? binding.allowedUse : [],
+                    }),
+                ),
+                blockers: Array.isArray(registry.blockers) ? registry.blockers : [],
+            }
+            : null,
+    };
+};
+
 const hasRuntimePolicyContradiction = (capabilities: RuntimeCapabilitiesResponse): boolean => {
     const topLevelAutonomous =
         capabilities.boundary_state === 'autonomous' ||
@@ -242,10 +288,7 @@ export const RuntimeLaneStatus: React.FC = () => {
         const loadCapabilities = async () => {
             try {
                 const response = await getRuntimeCapabilities();
-                setCapabilities({
-                    ...response,
-                    lanes: mergeBrowserCockpitLanes(response.lanes),
-                });
+                setCapabilities(normalizeRuntimeCapabilities(response));
                 setError(null);
             } catch (loadError) {
                 setError(loadError instanceof Error ? loadError.message : 'Unable to load runtime capabilities.');

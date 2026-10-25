@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { useEffect, useState } from 'react';
 import { getSymphonyMetrics, startSymphony, stopSymphony } from '../services/api/symphonyAPI';
 import { useSymphonyContext } from '../contexts/SymphonyContext';

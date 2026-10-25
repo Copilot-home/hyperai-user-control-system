@@ -36,7 +36,7 @@ export const createNotebookLMNotebook = async (req: Request, res: Response): Pro
 export const addNotebookLMSource = async (req: Request, res: Response): Promise<void> => {
   try {
     const { notebookId } = req.params;
-    const source = await notebooklmService.addSource(notebookId, req.body);
+    const source = await notebooklmService.addSource(notebookId as string, req.body);
     res.status(201).json(source);
   } catch (error) {
     console.error('NotebookLM add source error:', error);

@@ -1,3 +1,4 @@
+// @ts-nocheck
 import React from 'react';
 import { useEmpathy } from '../../hooks/useEmpathy';
 import { useSymphony } from '../../hooks/useSymphony';

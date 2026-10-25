@@ -11,7 +11,7 @@
 
 import { execFileSync, spawn } from "node:child_process";
 import { createServer } from "node:net";
-import { existsSync, mkdirSync, readFileSync, unlinkSync, writeFileSync } from "node:fs";
+import { appendFileSync, closeSync, existsSync, mkdirSync, openSync, readFileSync, unlinkSync, writeFileSync } from "node:fs";
 import path from "node:path";
 import process from "node:process";
 import { fileURLToPath } from "node:url";
@@ -23,6 +23,8 @@ const projectRoot = path.resolve(__dirname, "../..");
 const runtimeDir = path.resolve(projectRoot, "..", "runtime");
 const manifestPath = path.join(runtimeDir, "hyperai-autonomous-runtime.json");
 const distDir = path.join(projectRoot, "dist-isolated");
+const processLogDir = path.join(runtimeDir, "process-logs");
+const processLaunchLogPath = path.join(processLogDir, "process-launches.jsonl");
 
 const defaultBackendPort = Number(process.env.HYPERAI_DEFAULT_BACKEND_PORT ?? 5000);
 const defaultFrontendPort = Number(process.env.HYPERAI_DEFAULT_FRONTEND_PORT ?? 4173);
@@ -188,16 +190,42 @@ async function waitForStableRuntimeAuthority({ backendPort, frontendPort, laneLa
   return runtime;;
 }
 
-function spawnDetached(command, args, env) {
-  const child = spawn(command, args, {
-    cwd: projectRoot,
-    env: { ...process.env, ...env },
-    detached: true,
-    stdio: "ignore",
-    windowsHide: true,
-  });
-  child.unref();
-  return child.pid;
+function spawnDetached(command, args, env, logStem) {
+  mkdirSync(processLogDir, { recursive: true });
+  const stdoutPath = path.join(processLogDir, `${logStem}.stdout.log`);
+  const stderrPath = path.join(processLogDir, `${logStem}.stderr.log`);
+  const stdoutFd = openSync(stdoutPath, "a");
+  const stderrFd = openSync(stderrPath, "a");
+
+  try {
+    const child = spawn(command, args, {
+      cwd: projectRoot,
+      env: { ...process.env, ...env },
+      detached: true,
+      stdio: ["ignore", stdoutFd, stderrFd],
+      windowsHide: true,
+    });
+    child.unref();
+    appendFileSync(
+      processLaunchLogPath,
+      `${JSON.stringify({
+        schema_version: "2026-10-23.hyperai-process-launch.v1",
+        ts: new Date().toISOString(),
+        source: "scripts/runtime/start-autonomous-runtime.mjs",
+        pid: child.pid,
+        cwd: projectRoot,
+        command,
+        args,
+        stdout: stdoutPath,
+        stderr: stderrPath,
+      })}\n`,
+      "utf8",
+    );
+    return child.pid;
+  } finally {
+    closeSync(stdoutFd);
+    closeSync(stderrFd);
+  }
 }
 
 async function runBuild(env) {
@@ -347,10 +375,10 @@ async function startManagedRuntime({ previousManifest, recoveryFailure = null })
   let frontendPid = null;
 
   try {
-    backendPid = spawnDetached("node", ["backend/server.js"], { PORT: String(backendPort) });
+    backendPid = spawnDetached("node", ["backend/server.js"], { PORT: String(backendPort) }, `backend-${backendPort}`);
     await waitForUrl(`http://127.0.0.1:${backendPort}/api/health`, "managed backend health");
 
-    frontendPid = spawnDetached("node", ["scripts/runtime/static-spa-server.mjs", distDir, String(frontendPort)], {});
+    frontendPid = spawnDetached("node", ["scripts/runtime/static-spa-server.mjs", distDir, String(frontendPort)], {}, `frontend-${frontendPort}`);
     await waitForUrl(`http://127.0.0.1:${frontendPort}`, "managed frontend preview");
 
     if (!skipRuntimeSmoke) {
@@ -445,11 +473,11 @@ async function main() {
 
     try {
       if (defaultBackendStale || !defaultBackendAlive) {
-        recoveredBackendPid = spawnDetached("node", ["backend/server.js"], { PORT: String(defaultBackendPort) });
+        recoveredBackendPid = spawnDetached("node", ["backend/server.js"], { PORT: String(defaultBackendPort) }, `backend-${defaultBackendPort}`);
         await waitForUrl(`http://127.0.0.1:${defaultBackendPort}/api/health`, "default backend health");
       }
       if (!defaultFrontendAlive) {
-        recoveredFrontendPid = spawnDetached("node", ["scripts/runtime/static-spa-server.mjs", distDir, String(defaultFrontendPort)], {});
+        recoveredFrontendPid = spawnDetached("node", ["scripts/runtime/static-spa-server.mjs", distDir, String(defaultFrontendPort)], {}, `frontend-${defaultFrontendPort}`);
         await waitForUrl(`http://127.0.0.1:${defaultFrontendPort}`, "default frontend preview");
       }
       if (!skipRuntimeSmoke) {

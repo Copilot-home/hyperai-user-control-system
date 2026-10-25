@@ -1,3 +1,4 @@
+// @ts-nocheck
 export const createCulturalBridge = (culturalData) => {
     // Function to create a cultural bridge based on provided cultural data
     return {

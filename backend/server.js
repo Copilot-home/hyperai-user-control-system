@@ -11,7 +11,7 @@ const express = require('express');
 const fs = require('fs');
 const http = require('http');
 const path = require('path');
-const { spawnSync } = require('child_process');
+const { spawn, spawnSync, execFile } = require('child_process');
 const { Server } = require('socket.io');
 const cors = require('cors');
 const autonomyRuntime = require('./services/autonomyRuntime');
@@ -79,6 +79,7 @@ const executeTextProbe = async (url) => {
 const bootTimestamp = Date.now();
 const serverFilePath = path.join(__dirname, 'server.js');
 const workspaceRoot = path.resolve(__dirname, '..', '..');
+const canonicalEstateDir = path.resolve(workspaceRoot, 'runtime', 'canonical_estate');
 const policyStatePath = path.resolve(workspaceRoot, 'runtime', 'hyperai-autonomous-policy.json');
 const runtimeManifestPath = path.resolve(workspaceRoot, 'runtime', 'hyperai-autonomous-runtime.json');
 const notebookRegistry = [
@@ -299,6 +300,75 @@ const readJsonFile = (filePath, fallback = {}) => {
     } catch {
         return fallback;
     }
+};
+
+const buildCanonicalEstateSummary = () => {
+    const readRegistry = (name) => readJsonFile(path.join(canonicalEstateDir, `${name}.json`), { count: 0, records: [] });
+    const canonicalState = readJsonFile(path.join(canonicalEstateDir, 'canonical_state.json'), {});
+    const audit = readJsonFile(path.join(canonicalEstateDir, 'mission_compliance_audit.json'), {});
+    const models = readRegistry('model_registry');
+    const services = readRegistry('service_registry');
+    const routes = readRegistry('route_registry');
+    const health = readRegistry('health_registry');
+    const nodes = readRegistry('node_registry');
+    const memory = readRegistry('memory_registry');
+    const ledger = readRegistry('evidence_ledger');
+    const modelRecords = Array.isArray(models.records) ? models.records : [];
+    const serviceRecords = Array.isArray(services.records) ? services.records : [];
+    const nodeRecords = Array.isArray(nodes.records) ? nodes.records : [];
+    const memoryRecords = Array.isArray(memory.records) ? memory.records : [];
+    const healthRecords = Array.isArray(health.records) ? health.records : [];
+    const activeModels = modelRecords.filter((item) => item.eligible === true);
+    const ineligibleModels = modelRecords.filter((item) => item.eligible !== true);
+
+    return {
+        generated_at: new Date().toISOString(),
+        estate_generated_at: canonicalState.generated_at || null,
+        decision: canonicalState.canonical === true ? 'CANONICAL' : 'HOLD',
+        why: canonicalState.canonical === true
+            ? 'All active estate objects passed callable, persistence, parity, registry, memory, recovery, and CI gates.'
+            : 'One or more proof-bound canonical gates remain unresolved.',
+        risk: ineligibleModels.length > 0
+            ? `${ineligibleModels.length} discovered model artifacts remain outside the active canonical set and are explicitly classified.`
+            : 'No discovered model is outside the active canonical set.',
+        outcome: audit.outcome || 'unknown',
+        state_change: canonicalState.truth_state || 'UNKNOWN',
+        canonical_state: canonicalState,
+        audit: {
+            outcome: audit.outcome || 'unknown',
+            truth_state: audit.truth_state || 'UNKNOWN',
+            checked_at: audit.checked_at || null,
+            checks: audit.checks || {},
+        },
+        counts: {
+            models: models.count || modelRecords.length,
+            canonical_models: activeModels.filter((item) => item.canonical === true).length,
+            ineligible_models: ineligibleModels.length,
+            services: services.count || serviceRecords.length,
+            routes: routes.count || 0,
+            health_targets: health.count || healthRecords.length,
+            nodes: nodes.count || nodeRecords.length,
+            memory_systems: memory.count || memoryRecords.length,
+            evidence_entries: ledger.count || 0,
+        },
+        nodes: nodeRecords.map((item) => ({
+            id: item.node_id,
+            type: item.type,
+            reachable: item.reachable,
+            verified: item.verified,
+            persistent: item.state?.persistent === true,
+            truth_state: item.state?.truth_state || 'UNKNOWN',
+            runtimes: Array.isArray(item.runtimes) ? item.runtimes : [],
+            optional: item.optional_inventory_slot === true,
+        })),
+        runtimes: serviceRecords
+            .filter((item) => ['model_runtime', 'reasoning_provider', 'agent_gateway'].includes(item.type))
+            .map((item) => ({ id: item.service_id, healthy: item.state?.verified === true, persistent: item.state?.persistent === true, truth_state: item.state?.truth_state || 'UNKNOWN' })),
+        services: serviceRecords.map((item) => ({ id: item.service_id, type: item.type, healthy: item.state?.verified === true, persistent: item.state?.persistent === true, truth_state: item.state?.truth_state || 'UNKNOWN' })),
+        memory: memoryRecords.map((item) => ({ id: item.memory_id, identity_verified: item.identity_verified === true, read_verified: item.read_path_verified === true, write_verified: item.write_path_verified === true, replicated: item.replication_verified === true, truth_state: item.state?.truth_state || 'UNKNOWN' })),
+        excluded_models: ineligibleModels.map((item) => ({ id: item.id, reason: item.eligibility_reason || 'unknown', truth_state: item.state?.truth_state || 'UNKNOWN' })),
+        unhealthy_targets: healthRecords.filter((item) => item.status !== 'healthy').map((item) => ({ target: item.target, status: item.status, error: item.error || null })),
+    };
 };
 
 const buildAppBuildRuntimeRegistry = () => {
@@ -2302,6 +2372,9 @@ const buildRuntimeCapabilities = async () => {
 };
 
 app.get('/api/health', (req, res) => res.json({ status: 'OK', message: 'APO-NET Core Active' }));
+app.get('/api/estate/summary', (req, res) => {
+    res.json(buildCanonicalEstateSummary());
+});
 app.get('/api/runtime/capabilities', async (req, res) => {
     res.json(await buildRuntimeCapabilities());
 });
@@ -2404,25 +2477,269 @@ app.get('/api/workspace/missions', async (req, res) => {
 });
 
 app.post('/api/workspace/missions', async (req, res) => {
+    // This bridge may launch a system worker: only the local trusted operator can invoke it.
+    const peer = req.socket.remoteAddress;
+    if (!['127.0.0.1', '::1', '::ffff:127.0.0.1'].includes(peer)) {
+        res.status(403).json({ status: 'blocked', reason: 'LOCAL_MISSION_INTAKE_ONLY' });
+        return;
+    }
+    // Localhost is not an authorization signal for cross-origin browser requests.
+    const origin = req.headers.origin;
+    const allowedOrigins = new Set([
+        'http://127.0.0.1:4173', 'http://localhost:4173',
+        'http://127.0.0.1:5173', 'http://localhost:5173',
+        ...String(process.env.HYPERAI_MISSION_ALLOWED_ORIGINS || '')
+            .split(',').map((entry) => entry.trim()).filter(Boolean),
+    ]);
+    if (req.headers['sec-fetch-site'] === 'cross-site' || (origin && !allowedOrigins.has(origin))) {
+        res.status(403).json({ status: 'blocked', reason: 'MISSION_ORIGIN_NOT_AUTHORIZED' });
+        return;
+    }
     const payload = req.body || {};
+    const task = [payload.task, payload.title, payload.intent]
+        .find((value) => typeof value === 'string' && value.trim());
+    if (!task || task.length > 12000) {
+        res.status(400).json({ status: 'blocked', reason: 'MISSION_TASK_INVALID' });
+        return;
+    }
+    let goalContract = payload.goal_contract;
+    let capabilityDiscovery = null;
+    if (goalContract === undefined) {
+        // Reuse the governed registry router for bounded, evidence-linked intent
+        // resolution. Never let unclassified free-form language select a mutating tool.
+        capabilityDiscovery = await new Promise((resolve) => {
+            const child = execFile(process.env.HYPERAI_PYTHON || 'python', [
+                path.join(workspaceRoot, 'tools', 'mission_surface_router.py'),
+                '--discover-readonly-intent',
+            ], { cwd: workspaceRoot, windowsHide: true, timeout: 3000, maxBuffer: 8192 },
+            (error, stdout) => {
+                if (error) {
+                    resolve({ status: 'unavailable', reason: 'CAPABILITY_DISCOVERY_FAILED' });
+                    return;
+                }
+                try { resolve(JSON.parse(stdout.trim())); }
+                catch { resolve({ status: 'unavailable', reason: 'CAPABILITY_DISCOVERY_UNREADABLE' }); }
+            });
+            child.stdin.on('error', () => {});
+            child.stdin.end(task);
+        });
+        if (capabilityDiscovery.status === 'unavailable') {
+            res.status(503).json({ status: 'blocked', reason: capabilityDiscovery.reason });
+            return;
+        }
+        if (capabilityDiscovery.status === 'selected') {
+            goalContract = {
+                capability: capabilityDiscovery.capability,
+                checks: capabilityDiscovery.checks,
+            };
+        } else if (capabilityDiscovery.read_only_intent || payload.auto_discover_readonly === true) {
+            res.status(422).json({
+                status: 'abstain', reason: capabilityDiscovery.reason,
+                candidate_count: capabilityDiscovery.candidate_count || 0,
+            });
+            return;
+        }
+    }
+    if (goalContract !== undefined) {
+        const jsonTarget = typeof goalContract?.target === 'string'
+            && goalContract.target.startsWith('runtime/federation_orchestrator/')
+            && goalContract.capability === undefined;
+        const selector = goalContract?.capability;
+        const capabilityTarget = selector && goalContract.target === undefined
+            && typeof selector.surface === 'string' && typeof selector.operation === 'string'
+            && /^[A-Za-z0-9_-]{1,128}$/.test(selector.surface)
+            && /^[A-Za-z0-9_-]{1,128}$/.test(selector.operation);
+        const validChecks = Array.isArray(goalContract?.checks)
+            && goalContract.checks.length >= 1 && goalContract.checks.length <= 8
+            && goalContract.checks.every((check) =>
+                check?.type === 'json_value' && Object.hasOwn(check, 'equals')
+                && Array.isArray(check.json_path) && check.json_path.length >= 1);
+        if (!validChecks || (!jsonTarget && !capabilityTarget)) {
+            res.status(400).json({ status: 'blocked', reason: 'READONLY_GOAL_CONTRACT_INVALID' });
+            return;
+        }
+        if (capabilityTarget) {
+            const catalog = readJsonFile(path.join(federationRuntimeDir, 'mission_center_capability_router.json'), {});
+            const selected = catalog.surface_aliases?.[selector.surface] || selector.surface;
+            const surface = catalog.surfaces?.[selected];
+            const operation = surface?.operations?.[selector.operation];
+            if (surface?.dispatch_state !== 'callable' || operation?.kind !== 'local_audit') {
+                res.status(403).json({ status: 'blocked', reason: 'REGISTERED_READONLY_CAPABILITY_REQUIRED' });
+                return;
+            }
+        }
+    }
+    if (workspaceMissionRequests.some((mission) => ['running', 'executing_goal'].includes(mission.status))) {
+        res.status(409).json({ status: 'blocked', reason: 'MISSION_ALREADY_RUNNING' });
+        return;
+    }
+    const runner = path.join(workspaceRoot, 'tools', 'hyperai_ooda_loop.py');
+    if (!fs.existsSync(runner)) {
+        res.status(503).json({ status: 'blocked', reason: 'OODA_ENTRYPOINT_MISSING' });
+        return;
+    }
     const requestedMission = {
         mission_request_id: `mission_${Date.now()}`,
-        title: payload.title || payload.intent || 'Untitled mission',
-        intent: payload.intent || 'general',
+        title: payload.title || task,
+        intent: task,
         preferred_mode: payload.preferred_mode || 'mission_mode',
         requested_nodes: Array.isArray(payload.requested_nodes) ? payload.requested_nodes : [],
         created_at: new Date().toISOString(),
-        status: 'queued',
+        capability_selection: capabilityDiscovery?.status === 'selected'
+            ? { source: 'registry_intent_resolution', reason: capabilityDiscovery.reason,
+                capability: capabilityDiscovery.capability }
+            : (goalContract ? { source: 'explicit_goal_contract' } : null),
+        status: 'running',
+        goal_satisfied: false,
     };
     workspaceMissionRequests.unshift(requestedMission);
     workspaceSessionState.mode = requestedMission.preferred_mode;
-    res.status(201).json(requestedMission);
+    const worker = spawn(process.env.HYPERAI_PYTHON || 'python', [
+        runner, '--task', task, '--once',
+    ], { cwd: workspaceRoot, windowsHide: true, stdio: ['ignore', 'pipe', 'pipe'] });
+    let stdout = '';
+    let stderr = '';
+    const appendBounded = (value, chunk) => (value + String(chunk)).slice(-2097152);
+    worker.stdout.on('data', (chunk) => { stdout = appendBounded(stdout, chunk); });
+    worker.stderr.on('data', (chunk) => { stderr = appendBounded(stderr, chunk); });
+    worker.on('error', (error) => {
+        requestedMission.status = 'blocked_by_gate';
+        requestedMission.error = error.message;
+        requestedMission.completed_at = new Date().toISOString();
+    });
+    worker.on('close', async (code) => {
+        if (requestedMission.completed_at) return;
+        let output;
+        try { output = JSON.parse(stdout.trim()); } catch { output = null; }
+        requestedMission.exit_code = code;
+        requestedMission.reported_state = output?.final_state || null;
+        requestedMission.cycle_id = output?.cycle_id || null;
+        requestedMission.execution_mission_id = output?.act?.mission_id || null;
+        requestedMission.evidence_path = output?.log_path || null;
+        requestedMission.status = code === 0 && output?.final_state
+            ? 'execution_reported'
+            : 'blocked_by_gate';
+        requestedMission.error = code === 0 && output ? null : (output?.error || stderr.slice(-2000) || 'NO_EXECUTION_RECEIPT');
+
+        // A typed, read-only goal may cross from OODA into the existing mission-todo
+        // runner, but only after the OODA commit gate has accepted its route.
+        if (goalContract !== undefined) {
+            if (code !== 0 || output?.final_state !== 'executed_with_proof'
+                || output?.execution_manifold?.commit_gate?.commit_allowed !== true) {
+                requestedMission.status = 'blocked_by_gate';
+                requestedMission.verification_reason = 'OODA_ROUTE_NOT_CERTIFIED';
+            } else {
+                requestedMission.status = 'executing_goal';
+                const outcome = await new Promise((resolve) => {
+                    const child = execFile(process.env.HYPERAI_PYTHON || 'python', [
+                        path.join(workspaceRoot, 'tools', 'mission_todo_runtime.py'),
+                        '--execute-readonly-contract',
+                    ], { cwd: workspaceRoot, windowsHide: true, timeout: 30000, maxBuffer: 16384 },
+                    (error, childStdout) => {
+                        if (error) {
+                            resolve({ goal_satisfied: false, reason: 'GOAL_EXECUTOR_FAILED' });
+                            return;
+                        }
+                        try { resolve(JSON.parse(childStdout.trim())); }
+                        catch { resolve({ goal_satisfied: false, reason: 'GOAL_RECEIPT_UNREADABLE' }); }
+                    });
+                    child.stdin.on('error', () => {});
+                    child.stdin.end(JSON.stringify({
+                        mission_id: requestedMission.mission_request_id,
+                        goal: task, target: goalContract.target, capability: goalContract.capability, checks: goalContract.checks,
+                        source_lineage: {
+                            cycle_id: output.cycle_id,
+                            ooda_log_path: output.log_path,
+                            agent_mission_id: output.act?.mission_id,
+                            selection_source: capabilityDiscovery?.status === 'selected'
+                                ? 'registry_intent_resolution' : 'explicit_goal_contract',
+                        },
+                    }));
+                });
+                requestedMission.goal_satisfied = outcome.goal_satisfied === true;
+                requestedMission.verification_reason = outcome.reason || 'GOAL_NOT_VERIFIED';
+                requestedMission.goal_proof_path = outcome.proof_path || null;
+                requestedMission.status = requestedMission.goal_satisfied ? 'satisfied' : 'goal_unverified';
+            }
+        }
+        requestedMission.completed_at = new Date().toISOString();
+    });
+    res.status(202).json(requestedMission);
 });
 
 app.get('/api/workspace/missions/:id', async (req, res) => {
     const artifacts = readWorkspaceArtifacts();
     const mission = (artifacts.missionBindings.bindings || {})[req.params.id] || workspaceMissionRequests.find((item) => item.mission_request_id === req.params.id);
+    {
+        // Prefer durable goal evidence over an in-memory completion claim.
+        const queue = readJsonFile(path.join(federationRuntimeDir, 'mission_todo_queue.json'), { missions: [] });
+        const persisted = (Array.isArray(queue.missions) ? queue.missions : [])
+            .find((item) => item.id === req.params.id);
+        if (persisted) {
+            const items = Array.isArray(persisted.todo_list) ? persisted.todo_list : [];
+            // Reuse the canonical Python verifier for fresh readback, not a duplicate API predicate.
+            const verification = await new Promise((resolve) => {
+                if (typeof persisted.id !== 'string' || !/^[A-Za-z0-9_-]{1,128}$/.test(persisted.id)) {
+                    resolve({ goal_satisfied: false, reason: 'MISSION_ID_INVALID' });
+                    return;
+                }
+                execFile(process.env.HYPERAI_PYTHON || 'python', [
+                    path.join(workspaceRoot, 'tools', 'mission_todo_runtime.py'),
+                    '--verify-mission', persisted.id,
+                ], { cwd: workspaceRoot, windowsHide: true, timeout: 3000, maxBuffer: 16384 },
+                (error, stdout) => {
+                    if (error) {
+                        resolve({ goal_satisfied: false, reason: 'READBACK_PROCESS_FAILED' });
+                        return;
+                    }
+                    try {
+                        resolve(JSON.parse(stdout.trim()));
+                    } catch {
+                        resolve({ goal_satisfied: false, reason: 'READBACK_UNPARSEABLE' });
+                    }
+                });
+            });
+            res.json({
+                mission_request_id: persisted.id,
+                source: 'mission_todo_runtime',
+                title: persisted.title || null,
+                status: persisted.status || 'unknown',
+                item_count: items.length,
+                completed_item_count: items.filter((item) => item.status === 'done').length,
+                queue_items_complete: items.length > 0 && items.every((item) => item.status === 'done'),
+                goal_satisfied: verification.goal_satisfied === true,
+                verification_reason: verification.reason || 'NOT_VERIFIED',
+                source_lineage_verified: verification.source_lineage_verified === true,
+                cycle_id: persisted.source_lineage?.cycle_id || null,
+                execution_mission_id: persisted.source_lineage?.agent_mission_id || null,
+                capability_selection: persisted.source_lineage?.selection_source
+                    ? { source: persisted.source_lineage.selection_source,
+                        capability: items[0]?.route?.surface
+                            ? { surface: items[0].route.surface, operation: items[0]?.payload?.operation }
+                            : null }
+                    : null,
+                reported_evidence_path: persisted.last_log_path || null,
+            });
+            return;
+        }
+    }
     if (!mission) {
+        // OODA cycle logs are already durable; expose their bounded proof reference after API restarts.
+        if (/^ooda-\d{8}T\d{6}Z$/.test(req.params.id)) {
+            const proof = readJsonFile(path.join(federationRuntimeDir, 'autonomous_ooda_logs', `${req.params.id}.json`), null);
+            if (proof?.cycle_id === req.params.id) {
+                res.json({
+                    mission_request_id: proof.cycle_id,
+                    source: 'hyperai_ooda_loop',
+                    status: proof.final_state ? 'execution_reported' : 'unverified',
+                    reported_state: proof.final_state || null,
+                    execution_mission_id: proof.act?.mission_id || null,
+                    goal_satisfied: false,
+                    reported_evidence_path: proof.log_path || null,
+                });
+                return;
+            }
+        }
         res.status(404).json({ status: 'missing', detail: 'Mission was not found.' });
         return;
     }

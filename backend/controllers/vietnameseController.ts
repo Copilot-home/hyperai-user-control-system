@@ -10,7 +10,7 @@ export const analyzeVietnameseText = async (req: Request, res: Response): Promis
         res.status(200).json(analysisResult);
     } catch (error) {
         console.error('Error analyzing text:', error);
-        res.status(500).json({ message: 'Error analyzing text', error: error.message });
+        res.status(500).json({ message: 'Error analyzing text', error: (error as Error).message });
     }
 };
 
@@ -27,6 +27,6 @@ export const generateCulturalContent = async (req: Request, res: Response): Prom
         });
     } catch (error) {
         console.error('Error generating cultural content:', error);
-        res.status(500).json({ message: 'Error generating cultural content', error: error.message });
+        res.status(500).json({ message: 'Error generating cultural content', error: (error as Error).message });
     }
 };
