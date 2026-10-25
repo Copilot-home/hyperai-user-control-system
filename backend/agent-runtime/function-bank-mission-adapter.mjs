@@ -4,7 +4,12 @@
  */
 export function createFunctionBankMissionDeps({
   functionBank,
-  authorize = async () => ({ allowed: true }),
+  authorize = async (task, selected) => (
+    selected?.mutation === false && task?.mutation !== true &&
+    selected?.has_readback === true && selected?.has_verify === true
+      ? { allowed: true, scope: 'registered-read-only' }
+      : { status: 'HUMAN_DECISION_REQUIRED', cause: 'READONLY_AUTHORITY_NOT_PROVED' }
+  ),
   selectSkill,
   selectConnector,
   discoverAlternative,
@@ -12,11 +17,11 @@ export function createFunctionBankMissionDeps({
   discover,
   capabilityCensus,
   finalReadback,
-  successCriteria = (_task, observation, mission) =>
-    observation?.success_criteria_met === true || mission?.success_criteria?.default === true,
+  successCriteria = (_task, observation) => observation?.success_criteria_met === true,
   repair = async () => ({ status: "REPAIRED" }),
 } = {}) {
-  if (!functionBank || typeof functionBank.select !== "function" || typeof functionBank.execute !== "function") {
+  if (!functionBank || typeof functionBank.select !== "function" ||
+      typeof functionBank.execute !== "function" || typeof functionBank.observe !== "function") {
     throw new Error("FUNCTION_BANK_BINDING_INVALID");
   }
   return {
@@ -32,23 +37,36 @@ export function createFunctionBankMissionDeps({
     authorize,
     discoverAlternative,
     execute: async (task, selectedFunction, mission) => functionBank.execute(selectedFunction, task, { mission }),
-    observe: async (_task, execution) => {
-      const result = execution?.result;
-      const readback = result?.readback ?? result?.observation?.readback;
-      return {
-        readback,
-        success_criteria_met: result?.success_criteria_met,
-        conflicting_state: result?.conflicting_state === true,
-        unknown: result?.unknown === true || readback === undefined,
-        error: execution?.error,
-      };
+    observe: async (task, execution, mission) => {
+      const functionId = execution?.receipt?.function_id;
+      if (!functionId) return { readback: null, unknown: true,
+        error: { classification: 'configuration', message: 'RECEIPT_FUNCTION_ID_MISSING' } };
+      return functionBank.observe({ id: functionId }, task, execution, { mission });
     },
     successCriteria,
     repair,
-    finalReadback: finalReadback ?? (async (mission) => ({
-      objectives_verified: mission.queue.every((task) => task.state === "PASS"),
-      state_matches_reality: true,
-      unresolved_blockers: mission.unresolved_blockers ?? [],
-    })),
+    finalReadback: finalReadback ?? (async (mission) => {
+      const checks = [];
+      for (const task of mission.queue) {
+        const functionId = task.receipt?.function_id;
+        const selection = functionId && functionBank.select({ function_id: functionId });
+        if (!selection || task.state !== 'PASS') {
+          checks.push(false);
+          continue;
+        }
+        // A fresh readback is required at the terminal gate; an earlier
+        // execution receipt or self-reported output is not state proof.
+        const observed = await functionBank.observe(selection, task,
+          { receipt: task.receipt }, { mission, terminal: true });
+        checks.push(observed.success_criteria_met === true && observed.unknown !== true);
+      }
+      const verified = mission.queue.length > 0 && checks.length === mission.queue.length &&
+        checks.every(Boolean) && (mission.unresolved_blockers ?? []).length === 0;
+      return {
+        objectives_verified: verified,
+        state_matches_reality: verified,
+        unresolved_blockers: verified ? [] : [{ cause: 'FINAL_INDEPENDENT_READBACK_UNVERIFIED' }],
+      };
+    }),
   };
 }

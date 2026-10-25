@@ -53,6 +53,7 @@ export function classifyFailure(error = {}) {
 
 export function verifyTaskEvidence(task, evidence) {
   if (!evidence || !evidence.execution_receipt) return { status:"NOT_VERIFIED", reason:"NO_RECEIPT" };
+  if (evidence.execution_receipt.status !== "EXECUTED") return { status:"NOT_VERIFIED", reason:"EXECUTION_NOT_CONFIRMED" };
   if (!evidence.readback) return { status:"NOT_VERIFIED", reason:"NO_READBACK" };
   if (evidence.conflicting_state) return { status:"FAIL", reason:"CONFLICTING_STATE" };
   if (evidence.unknown) return { status:"NOT_VERIFIED", reason:"UNKNOWN" };

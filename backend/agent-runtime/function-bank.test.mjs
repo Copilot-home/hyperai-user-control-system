@@ -34,3 +34,63 @@ test("executor failure is represented as a receipt-bearing error", async () => {
   assert.equal(result.error.classification, "transient");
   assert.equal(result.receipt.status, "ERROR");
 });
+
+test("capability census exposes verification availability, not executable closures", () => {
+  const bank = new FunctionBank();
+  bank.register({
+    id: "read.boundary", capability: "read.boundary", mutation: false,
+    execute: async () => ({ answer: "self-reported" }),
+    readback: async () => ({ answer: "observed" }),
+    verify: async () => true
+  });
+  const [result] = bank.discover({ function_id: "read.boundary" });
+  assert.equal(result.has_readback, true);
+  assert.equal(result.has_verify, true);
+  assert.equal(result.mutation, false);
+  assert.equal(result.execute, undefined);
+  assert.equal(result.readback, undefined);
+  assert.equal(result.verify, undefined);
+});
+
+test("independent readback can contradict a self-reported execution result", async () => {
+  const bank = new FunctionBank();
+  let observations = 0;
+  bank.register({
+    id: "read.truth", capability: "read.truth", mutation: false,
+    execute: async () => ({ value: "PASS", success_criteria_met: true }),
+    readback: async () => { observations++; return { value: "FAIL" }; },
+    verify: async (_task, _execution, observed) => observed.value === "PASS"
+  });
+  const functionRef = bank.select({ function_id: "read.truth" });
+  const executed = await bank.execute(functionRef, { task_id: "TRUTH" });
+  const observed = await bank.observe(functionRef, { task_id: "TRUTH" }, executed);
+  assert.equal(executed.receipt.status, "EXECUTED");
+  assert.equal(observations, 1);
+  assert.equal(observed.success_criteria_met, false);
+  assert.equal(observed.unknown, true);
+});
+
+test("missing independent readback callback remains UNKNOWN after execution", async () => {
+  const bank = new FunctionBank();
+  bank.register({ id: "read.missing", capability: "read.missing",
+    mutation: false, execute: async () => ({ status: "PASS" }) });
+  const selection = bank.select({ function_id: "read.missing" });
+  const executed = await bank.execute(selection, {});
+  const observed = await bank.observe(selection, {}, executed);
+  assert.equal(observed.unknown, true);
+  assert.equal(observed.success_criteria_met, undefined);
+});
+
+test("readback failures cannot be silently counted as completion", async () => {
+  const bank = new FunctionBank();
+  bank.register({
+    id: "read.error", capability: "read.error", mutation: false,
+    execute: async () => ({ status: "PASS" }),
+    readback: async () => { throw new Error("network split"); },
+    verify: async () => true,
+  });
+  const observed = await bank.observe(bank.select({ function_id: "read.error" }), {}, {});
+  assert.equal(observed.unknown, true);
+  assert.equal(observed.success_criteria_met, undefined);
+  assert.equal(observed.error.message, "INDEPENDENT_READBACK_FAILED");
+});

@@ -27,7 +27,7 @@ function successfulDeps(overrides = {}) {
     capabilityCensus: async () => ({ executable: ["test.fn"] }),
     selectCapability: async () => ({ id: "test.fn" }),
     authorize: async () => ({ allowed: true }),
-    execute: async (task) => ({ receipt: { id: `r-${task.attempts}` } }),
+    execute: async (task) => ({ receipt: { id: `r-${task.attempts}`, status: "EXECUTED" } }),
     observe: async () => ({ readback: { actual: true } }),
     successCriteria: () => true,
     repair: async () => ({ status: "REPAIRED" }),
@@ -45,6 +45,35 @@ test("locks mission", () => assert.equal(lockMission(base).state, "LOCKED"));
 test("no receipt is not verified", () =>
   assert.equal(verifyTaskEvidence({}, {}).status, "NOT_VERIFIED"));
 
+test("failed or statusless execution receipts cannot become PASS", () => {
+  for (const status of ["ERROR", undefined]) {
+    const verification = verifyTaskEvidence({}, {
+      execution_receipt: { function_id: "test.fn", status },
+      readback: { actual: true },
+      success_criteria_met: true
+    });
+    assert.deepEqual(verification, {
+      status: "NOT_VERIFIED",
+      reason: "EXECUTION_NOT_CONFIRMED"
+    });
+  }
+});
+
+test("an ERROR receipt forces the mission loop to retry despite positive readback", async () => {
+  let n = 0;
+  const result = await runMission(base, successfulDeps({
+    execute: async () => {
+      n += 1;
+      return n === 1
+        ? { receipt: { status: "ERROR" }, error: { classification: "transient" } }
+        : { receipt: { status: "EXECUTED" } };
+    }
+  }));
+  assert.equal(result.state, "MISSION_PASS");
+  assert.equal(n, 2);
+  assert.equal(result.queue[0].attempts, 2);
+});
+
 test("full lifecycle executes discovery, planning, census and verification", async () => {
   const seen = [];
   const r = await runMission(base, successfulDeps({
@@ -53,7 +82,7 @@ test("full lifecycle executes discovery, planning, census and verification", asy
     capabilityCensus: async () => { seen.push("census"); return {}; },
     selectCapability: async () => { seen.push("select"); return { id: "fn" }; },
     authorize: async () => { seen.push("authorize"); return { allowed: true }; },
-    execute: async () => { seen.push("execute"); return { receipt: { id: "r" } }; },
+    execute: async () => { seen.push("execute"); return { receipt: { id: "r", status: "EXECUTED" } }; },
     observe: async () => { seen.push("observe"); return { readback: { actual: true } }; },
     finalReadback: async () => { seen.push("final-readback"); return {
       objectives_verified: true,
@@ -75,7 +104,7 @@ test("repair then continue", async () => {
       n++;
       return task.attempts === 1
         ? { error: { classification: "transient" } }
-        : { receipt: { id: "r" } };
+        : { receipt: { id: "r", status: "EXECUTED" } };
     }
   }));
   assert.equal(r.state, "MISSION_PASS");
